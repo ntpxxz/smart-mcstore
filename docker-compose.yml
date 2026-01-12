@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  db:
+    build: .
+    ports:
+      - "3050:3000"
+    env_file:
+      - .env
+    environment:
+      - NEXTAUTH_URL=http://localhost:3050
+    restart: always
+    networks:
+      - default
+      - db-net
+networks:
+  db-net:
+    external: true
