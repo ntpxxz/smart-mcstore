@@ -7,12 +7,107 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model BOMItem {
+  id              String          @id
+  name            String
+  requiredQty     Int
+  picked          Boolean         @default(false)
+  unit            String
+  moId            String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  ProductionOrder ProductionOrder @relation(fields: [moId], references: [id])
+}
+
+model InboundInvoice {
+  id          String        @id
+  vendor      String
+  po          String
+  status      String        @default("pending")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  InboundItem InboundItem[]
+}
+
+model InboundItem {
+  id             String         @id
+  name           String
+  sku            String
+  qty            Int
+  unit           String
+  received       Boolean        @default(false)
+  receivedQty    Int            @default(0)
+  invoiceId      String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime
+  InboundInvoice InboundInvoice @relation(fields: [invoiceId], references: [id])
+}
+
+model Movement {
+  id          String   @id
+  date        DateTime @default(now())
+  qty         Int
+  source      String
+  destination String
+  type        String
+  partId      String
+  createdAt   DateTime @default(now())
+  Part        Part     @relation(fields: [partId], references: [id])
+}
+
+model Part {
+  id             String     @id
+  name           String
+  qty            Int
+  unit           String
+  status         String
+  icon           String
+  sku            String     @unique
+  location       String
+  locationStatus String     @default("Available")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime
+  Movement       Movement[]
+}
+
+model ProductionOrder {
+  id          String    @id
+  status      String
+  line        String
+  description String
+  dueTime     String
+  progress    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  BOMItem     BOMItem[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id        String    @id
+  email     String    @unique
+  password  String
+  name      String
+  role      String    @default("OPERATOR")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime
+  Session   Session[]
+}
+
 model PurchaseOrder {
-  id       Int    @id @default(autoincrement())
-  po       String @unique
-  partNo   String
-  partName String
-  qty      Int
+  id        Int      @id @default(autoincrement())
+  po        String   @unique
+  partNo    String
+  partName  String
+  qty       Int
   timestamp String
   createdAt DateTime @default(now())
 
@@ -29,6 +124,7 @@ model Invoice {
   invoiceDate  String?
   receivedDate String?
   qty          Int
+  recordedBy   String?
   timestamp    String
   createdAt    DateTime @default(now())
 

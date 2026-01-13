@@ -63,7 +63,7 @@ const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record }) => {
 
                         <div className="w-full text-center py-1 flex-grow-0">
                             <div className="text-[10px] uppercase font-bold text-slate-500 mb-0">Part Number</div>
-                            <div className="text-3xl font-black uppercase font-mono break-all leading-tight print-black">{record.partNo}</div>
+                            <div className="text-xl font-black uppercase font-mono break-all leading-tight print-black">{record.partNo}</div>
                             <div className="text-xs font-medium text-slate-600 mt-1 line-clamp-2 px-1 leading-tight">{record.partName}</div>
                         </div>
 
@@ -84,7 +84,7 @@ const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record }) => {
                             </div>
                             <div className="col-span-2 mt-1 border-2 border-black rounded p-2 flex justify-between items-center print-border bg-slate-50 print:bg-transparent">
                                 <span className="font-bold text-sm uppercase">Quantity</span>
-                                <span className="text-3xl font-black leading-none print-black">{record.qty}</span>
+                                <span className="text-2xl font-black leading-none print-black">{record.qty}</span>
                             </div>
                         </div>
                     </div>
@@ -96,7 +96,7 @@ const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record }) => {
                         className="w-full bg-slate-900 hover:bg-black text-white py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 active:scale-[0.98]"
                     >
                         <Printer size={18} />
-                        Print Label (4" x 6")
+                        Print Label
                     </button>
                 </div>
             </div>

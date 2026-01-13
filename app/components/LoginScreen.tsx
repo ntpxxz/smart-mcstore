@@ -11,19 +11,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
         setIsLoading(true);
 
-        setTimeout(() => {
-            if (username === "admin" && password === "1234") {
-                onLogin({ username: "Admin User", role: "Warehouse Manager" });
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                onLogin(data);
             } else {
-                setError("Invalid credentials. Try admin / 1234");
-                setIsLoading(false);
+                setError(data.error || "Invalid credentials");
             }
-        }, 500);
+        } catch (err) {
+            setError("Connection error. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -93,19 +104,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                             ) : (
                                 <>
                                     <ShieldCheck size={18} />
-                                    <span>Sign In System</span>
+                                    <span>Login</span>
                                 </>
                             )}
                         </button>
                     </form>
 
-                    <div className="mt-8 text-center">
-                        <div className="inline-block px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
-                            <p className="text-xs text-slate-500">
-                                Default: <span className="font-mono font-bold text-slate-700">admin</span> / <span className="font-mono font-bold text-slate-700">1234</span>
-                            </p>
-                        </div>
-                    </div>
+
                 </div>
             </div>
         </div>

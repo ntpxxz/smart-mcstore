@@ -107,13 +107,14 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
                             <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('po')}>PO #</th>
                             <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('partNo')}>Part #</th>
                             <th className="px-6 py-4 text-right">Qty</th>
+                            <th className="px-6 py-4">User</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {currentTableData.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-6 py-12 text-center">
+                                <td colSpan={8} className="px-6 py-12 text-center">
                                     <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
                                         <div className="p-3 bg-slate-50 rounded-full">
                                             <History size={24} className="opacity-50" />
@@ -134,6 +135,7 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
                                         <div className="text-[10px] text-slate-400 truncate max-w-[200px]">{rec.partName}</div>
                                     </td>
                                     <td className="px-6 py-4 text-right font-bold text-slate-800">{rec.qty}</td>
+                                    <td className="px-6 py-4 text-xs text-slate-500">{rec.recordedBy || "-"}</td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
                                             <button

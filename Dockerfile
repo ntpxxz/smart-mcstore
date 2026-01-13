@@ -22,7 +22,6 @@ COPY . .
 
 # Generate Prisma Client
 RUN npx prisma generate
-RUN npx prisma generate --schema=./prisma/inventory.prisma
 
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED 1

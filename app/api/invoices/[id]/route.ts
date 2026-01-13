@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
-export async function DELETE(request, { params }) {
-    const { id } = params;
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const { id } = await params;
     try {
         await prisma.invoice.delete({
             where: { id: parseInt(id) }

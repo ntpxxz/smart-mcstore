@@ -2,20 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import LoginScreen from './components/LoginScreen';
-import Header from './components/Header';
+import Sidebar from './components/Sidebar';
 import InvoiceForm from './components/InvoiceForm';
 import HistoryTable from './components/HistoryTable';
 import LabelModal from './components/LabelModal';
+import UserManagement from './components/UserManagement';
 
 const API_BASE_URL = '/api';
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [currentView, setCurrentView] = useState<'invoices' | 'users'>('invoices');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Data State
   const [history, setHistory] = useState<any[]>([]);
   const [poDatabase, setPoDatabase] = useState<any[]>([]);
+  const [partsDatabase, setPartsDatabase] = useState<any[]>([]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,6 +44,12 @@ export default function Home() {
       const poData = await poRes.json();
       setPoDatabase(poData);
 
+      const partsRes = await fetch(`${API_BASE_URL}/parts`);
+      if (partsRes.ok) {
+        const partsData = await partsRes.json();
+        setPartsDatabase(partsData);
+      }
+
       setIsConnected(true);
     } catch (err) {
       console.warn("Backend not detected.", err);
@@ -61,6 +71,7 @@ export default function Home() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setCurrentView('invoices');
     localStorage.removeItem('warehouse_user_session');
   };
 
@@ -96,11 +107,21 @@ export default function Home() {
     if (confirm("Delete this record from database?")) {
       if (isConnected) {
         try {
-          await fetch(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' });
-          fetchData();
-        } catch (err) { console.error("Delete failed", err); }
+          const res = await fetch(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            alert("Record deleted successfully!");
+            fetchData();
+          } else {
+            const errorData = await res.json();
+            alert(`Failed to delete: ${errorData.error || 'Unknown error'}`);
+          }
+        } catch (err) {
+          console.error("Delete failed", err);
+          alert("Connection error: Could not delete the record.");
+        }
       } else {
         setHistory(history.filter(rec => rec.id !== id));
+        alert("Record removed from local view (Offline mode).");
       }
     }
   };
@@ -108,27 +129,61 @@ export default function Home() {
   if (!currentUser) return <LoginScreen onLogin={handleLogin} />;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-800 font-sans pb-20">
-      <Header
+    <div className="min-h-screen bg-slate-50/50 text-slate-800 font-sans">
+      <Sidebar
         currentUser={currentUser}
-        isConnected={isConnected}
+        currentView={currentView}
+        setCurrentView={setCurrentView}
         onLogout={handleLogout}
+        isConnected={isConnected}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      <main className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-        <InvoiceForm
-          currentUser={currentUser}
-          poDatabase={poDatabase}
-          isConnected={isConnected}
-          onSave={handleSave}
-        />
+      <main
+        className={`transition-all duration-300 p-4 sm:p-6 lg:p-8 min-h-screen ${isSidebarCollapsed ? 'ml-20' : 'ml-72'
+          }`}
+      >
+        <div className="max-w-[1600px] mx-auto space-y-8">
+          {/* Page Header */}
+          <div className="flex flex-col gap-1">
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+              {currentView === 'invoices' ? 'Invoice System' : 'User Management'}
+            </h1>
+            <p className="text-slate-500 text-sm font-medium">
+              {currentView === 'invoices'
+                ? 'Manage and track warehouse inbound invoices'
+                : 'Manage system users and access roles'}
+            </p>
+          </div>
 
-        <HistoryTable
-          history={history}
-          isConnected={isConnected}
-          onDelete={deleteRecord}
-          onPreview={(rec) => { setPreviewRecord(rec); setIsModalOpen(true); }}
-        />
+          {currentView === 'invoices' ? (
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="xl:col-span-6 2xl:col-span-4 space-y-6">
+                <InvoiceForm
+                  currentUser={currentUser}
+                  poDatabase={poDatabase}
+                  partsDatabase={partsDatabase}
+                  isConnected={isConnected}
+                  onSave={handleSave}
+                />
+              </div>
+
+              <div className="xl:col-span-6 2xl:col-span-8">
+                <HistoryTable
+                  history={history}
+                  isConnected={isConnected}
+                  onDelete={deleteRecord}
+                  onPreview={(rec) => { setPreviewRecord(rec); setIsModalOpen(true); }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <UserManagement />
+            </div>
+          )}
+        </div>
       </main>
 
       <LabelModal

@@ -4,11 +4,12 @@ import { FileText, User, Search, Calendar, Plus } from 'lucide-react';
 interface InvoiceFormProps {
     currentUser: { username: string };
     poDatabase: any[];
+    partsDatabase: any[];
     isConnected: boolean;
     onSave: (record: any) => Promise<void>;
 }
 
-const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, isConnected, onSave }) => {
+const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, partsDatabase, isConnected, onSave }) => {
     const [selectedPO, setSelectedPO] = useState("");
     const [vendor, setVendor] = useState("");
     const [partNo, setPartNo] = useState("");
@@ -31,6 +32,26 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, isCo
             setIsKnownPO(false);
         }
     }, [selectedPO, poDatabase]);
+
+    // Part Number Auto-fill Logic (from PO Database)
+    useEffect(() => {
+        if (!isKnownPO && partNo.trim()) {
+            const match = poDatabase.find(item => item.partNo.toLowerCase() === partNo.trim().toLowerCase());
+            if (match) {
+                setPartName(match.partName);
+            }
+        }
+    }, [partNo, poDatabase, isKnownPO]);
+
+    // System Part Auto-fill Logic (from System Parts Database)
+    useEffect(() => {
+        if (!isKnownPO && partNo.trim()) {
+            const match = partsDatabase.find(item => item.sku.toLowerCase() === partNo.trim().toLowerCase());
+            if (match) {
+                setPartName(match.name);
+            }
+        }
+    }, [partNo, partsDatabase, isKnownPO]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -98,8 +119,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, isCo
                                 type="text"
                                 list="po-list"
                                 className={`w-full pl-10 pr-4 py-3 border rounded-xl outline-none uppercase font-mono font-medium transition-all ${isKnownPO
-                                        ? 'border-green-500/50 ring-4 ring-green-500/10 bg-green-50/50 text-green-700'
-                                        : 'bg-slate-50 border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
+                                    ? 'border-green-500/50 ring-4 ring-green-500/10 bg-green-50/50 text-green-700'
+                                    : 'bg-slate-50 border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
                                     }`}
                                 placeholder="PO NUMBER"
                                 value={selectedPO}
@@ -117,8 +138,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, isCo
                 </div>
 
                 <div className={`rounded-xl p-5 border transition-all duration-300 flex flex-col gap-4 ${isKnownPO
-                        ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 shadow-inner'
-                        : 'bg-slate-50 border-slate-100'
+                    ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 shadow-inner'
+                    : 'bg-slate-50 border-slate-100'
                     }`}>
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -132,22 +153,31 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, isCo
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                        <div className="sm:col-span-1 space-y-1.5">
+                        <div className="sm:col-span-3 space-y-1.5">
                             <label className="block text-xs font-medium text-slate-500 mb-1 ml-1">Part Number</label>
                             <input
                                 type="text"
+                                list="part-list"
                                 value={partNo}
                                 onChange={(e) => setPartNo(e.target.value)}
                                 readOnly={isKnownPO}
                                 className={`w-full p-3 text-sm font-mono font-bold rounded-lg border transition-all ${isKnownPO
-                                        ? 'bg-white/50 border-transparent shadow-sm text-slate-700'
-                                        : 'bg-white border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                                    ? 'bg-white/50 border-transparent shadow-sm text-slate-700'
+                                    : 'bg-white border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
                                     }`}
                                 placeholder="Enter Part No"
                                 required
                             />
+                            <datalist id="part-list">
+                                {poDatabase.map((item) => (
+                                    <option key={`po-${item.id}`} value={item.partNo}>{item.partName}</option>
+                                ))}
+                                {partsDatabase.map((item) => (
+                                    <option key={`part-${item.id}`} value={item.sku}>{item.name}</option>
+                                ))}
+                            </datalist>
                         </div>
-                        <div className="sm:col-span-2 space-y-1.5">
+                        <div className="sm:col-span-3 space-y-1.5">
                             <label className="block text-xs font-medium text-slate-500 mb-1 ml-1">Description</label>
                             <input
                                 type="text"
@@ -155,8 +185,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, isCo
                                 onChange={(e) => setPartName(e.target.value)}
                                 readOnly={isKnownPO}
                                 className={`w-full p-3 text-sm font-medium rounded-lg border transition-all ${isKnownPO
-                                        ? 'bg-white/50 border-transparent shadow-sm text-slate-700'
-                                        : 'bg-white border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                                    ? 'bg-white/50 border-transparent shadow-sm text-slate-700'
+                                    : 'bg-white border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
                                     }`}
                                 placeholder="Enter Part Name"
                                 required
