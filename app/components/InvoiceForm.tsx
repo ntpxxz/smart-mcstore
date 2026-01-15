@@ -69,6 +69,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, part
             receivedDate,
             qty,
             user: currentUser.username,
+            iqcstatus: 'Pending',
             timestamp: new Date().toISOString()
         };
 

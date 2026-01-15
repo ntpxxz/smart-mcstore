@@ -1,17 +1,36 @@
 version: '3.8'
 services:
-  db:
+  app:
     build: .
     ports:
       - "3050:3000"
     env_file:
       - .env
     environment:
+      - DATABASE_URL=postgresql://rootpg:123456@host.docker.internal:5432/warehouse?schema=public&sslmode=disable
       - NEXTAUTH_URL=http://localhost:3050
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-      - default
-      - db-net
+      - app-net
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: rootpg
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: warehouse
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
 networks:
-  db-net:
-    external: true
+  app-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

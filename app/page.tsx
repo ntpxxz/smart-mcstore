@@ -7,6 +7,7 @@ import InvoiceForm from './components/InvoiceForm';
 import HistoryTable from './components/HistoryTable';
 import LabelModal from './components/LabelModal';
 import UserManagement from './components/UserManagement';
+import Toast, { ToastType } from './components/Toast';
 
 const API_BASE_URL = '/api';
 
@@ -24,6 +25,13 @@ export default function Home() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewRecord, setPreviewRecord] = useState<any>(null);
+
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ message, type });
+  };
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -84,13 +92,14 @@ export default function Home() {
           body: JSON.stringify(newRecord)
         });
         if (res.ok) {
+          showToast("Invoice saved successfully!");
           fetchData(); // Refresh list
         } else {
           throw new Error("Failed to save");
         }
       } catch (err) {
         console.error("Save failed", err);
-        alert("Error saving to database");
+        showToast("Error saving to database", "error");
         throw err; // Propagate to form
       }
     } else {
@@ -109,20 +118,46 @@ export default function Home() {
         try {
           const res = await fetch(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' });
           if (res.ok) {
-            alert("Record deleted successfully!");
+            showToast("Record deleted successfully!");
             fetchData();
           } else {
             const errorData = await res.json();
-            alert(`Failed to delete: ${errorData.error || 'Unknown error'}`);
+            showToast(`Failed to delete: ${errorData.error || 'Unknown error'}`, "error");
           }
         } catch (err) {
           console.error("Delete failed", err);
-          alert("Connection error: Could not delete the record.");
+          showToast("Connection error: Could not delete the record.", "error");
         }
       } else {
         setHistory(history.filter(rec => rec.id !== id));
-        alert("Record removed from local view (Offline mode).");
+        showToast("Record removed from local view (Offline mode).", "info");
       }
+    }
+  };
+
+  const updateStatus = async (id: any, status: string) => {
+    if (isConnected) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/invoices/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ iqcstatus: status })
+        });
+        if (res.ok) {
+          showToast("Status updated successfully!");
+          fetchData();
+        } else {
+          showToast("Failed to update status", "error");
+        }
+      } catch (err) {
+        console.error("Update failed", err);
+        showToast("Connection error: Could not update status.", "error");
+      }
+    } else {
+      // Offline fallback
+      setHistory(history.map(rec =>
+        rec.id === id ? { ...rec, iqcstatus: status } : rec
+      ));
     }
   };
 
@@ -175,6 +210,7 @@ export default function Home() {
                   isConnected={isConnected}
                   onDelete={deleteRecord}
                   onPreview={(rec) => { setPreviewRecord(rec); setIsModalOpen(true); }}
+                  onUpdateStatus={updateStatus}
                 />
               </div>
             </div>
@@ -191,6 +227,14 @@ export default function Home() {
         onClose={() => setIsModalOpen(false)}
         record={previewRecord}
       />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

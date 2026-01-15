@@ -6,9 +6,10 @@ interface HistoryTableProps {
     isConnected: boolean;
     onDelete: (id: any) => void;
     onPreview: (record: any) => void;
+    onUpdateStatus: (id: any, status: string) => void;
 }
 
-const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDelete, onPreview }) => {
+const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDelete, onPreview, onUpdateStatus }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'timestamp', direction: 'desc' });
     const [currentPage, setCurrentPage] = useState(1);
@@ -48,8 +49,8 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
 
     const handleExport = () => {
         if (history.length === 0) return;
-        const headers = ["Timestamp", "User", "Received Date", "Vendor", "PO", "Invoice", "Part No", "Qty"];
-        const rows = history.map(r => [`"${r.timestamp}"`, `"${r.user}"`, r.receivedDate, `"${r.vendor}"`, r.po, r.invoice, r.partNo, r.qty]);
+        const headers = ["Timestamp", "User", "Received Date", "Vendor", "PO", "Invoice", "Part No", "Qty", "IQC Status"];
+        const rows = history.map(r => [`"${formatDate(r.timestamp)}"`, `"${r.recordedBy || r.user}"`, formatDate(r.receivedDate), `"${r.vendor}"`, r.po, r.invoice, r.partNo, r.qty, r.iqcstatus || "Pending"]);
         const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
         const url = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }));
         const link = document.createElement("a");
@@ -58,6 +59,20 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const formatDate = (dateStr: string | null | undefined) => {
+        if (!dateStr) return "-";
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        } catch (e) {
+            return dateStr;
+        }
     };
 
     return (
@@ -107,6 +122,7 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
                             <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('po')}>PO #</th>
                             <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('partNo')}>Part #</th>
                             <th className="px-6 py-4 text-right">Qty</th>
+                            <th className="px-6 py-4">IQC Status</th>
                             <th className="px-6 py-4">User</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
@@ -126,7 +142,7 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
                         ) : (
                             currentTableData.map((rec) => (
                                 <tr key={rec.id} className="hover:bg-blue-50/30 transition-colors group">
-                                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap text-xs font-medium">{new Date(rec.timestamp).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap text-xs font-medium">{formatDate(rec.timestamp)}</td>
                                     <td className="px-6 py-4 font-medium text-slate-800 truncate max-w-[150px]" title={rec.vendor}>{rec.vendor || "-"}</td>
                                     <td className="px-6 py-4 font-mono text-xs text-slate-600 bg-slate-50/50 rounded px-2 py-1 w-fit">{rec.invoice}</td>
                                     <td className="px-6 py-4 text-xs font-bold text-blue-700">{rec.po}</td>
@@ -135,6 +151,17 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
                                         <div className="text-[10px] text-slate-400 truncate max-w-[200px]">{rec.partName}</div>
                                     </td>
                                     <td className="px-6 py-4 text-right font-bold text-slate-800">{rec.qty}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${rec.iqcstatus === 'Approved'
+                                            ? 'bg-green-50 text-green-700 border-green-200'
+                                            : rec.iqcstatus === 'Rejected'
+                                                ? 'bg-red-50 text-red-700 border-red-200'
+                                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                                            }`}>
+                                            {rec.iqcstatus || 'Pending'}
+                                        </span>
+                                    </td>
+
                                     <td className="px-6 py-4 text-xs text-slate-500">{rec.recordedBy || "-"}</td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">

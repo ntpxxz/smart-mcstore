@@ -82,6 +82,7 @@ const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record }) => {
                                 <div className="text-[10px] uppercase font-bold text-slate-500">Invoice No</div>
                                 <div className="text-sm font-bold font-mono print-black truncate">{record.invoice}</div>
                             </div>
+
                             <div className="col-span-2 mt-1 border-2 border-black rounded p-2 flex justify-between items-center print-border bg-slate-50 print:bg-transparent">
                                 <span className="font-bold text-sm uppercase">Quantity</span>
                                 <span className="text-2xl font-black leading-none print-black">{record.qty}</span>
