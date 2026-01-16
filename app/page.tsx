@@ -7,6 +7,7 @@ import InvoiceForm from './components/InvoiceForm';
 import HistoryTable from './components/HistoryTable';
 import LabelModal from './components/LabelModal';
 import UserManagement from './components/UserManagement';
+import SupplierManagement from './components/SupplierManagement';
 import Toast, { ToastType } from './components/Toast';
 
 const API_BASE_URL = '/api';
@@ -14,13 +15,14 @@ const API_BASE_URL = '/api';
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [currentView, setCurrentView] = useState<'invoices' | 'users'>('invoices');
+  const [currentView, setCurrentView] = useState<'invoices' | 'users' | 'suppliers'>('invoices');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Data State
   const [history, setHistory] = useState<any[]>([]);
   const [poDatabase, setPoDatabase] = useState<any[]>([]);
   const [partsDatabase, setPartsDatabase] = useState<any[]>([]);
+  const [suppliersDatabase, setSuppliersDatabase] = useState<any[]>([]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,6 +58,12 @@ export default function Home() {
       if (partsRes.ok) {
         const partsData = await partsRes.json();
         setPartsDatabase(partsData);
+      }
+
+      const suppliersRes = await fetch(`${API_BASE_URL}/suppliers`);
+      if (suppliersRes.ok) {
+        const suppliersData = await suppliersRes.json();
+        setSuppliersDatabase(suppliersData);
       }
 
       setIsConnected(true);
@@ -183,12 +191,14 @@ export default function Home() {
           {/* Page Header */}
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              {currentView === 'invoices' ? 'Invoice System' : 'User Management'}
+              {currentView === 'invoices' ? 'Invoice System' : currentView === 'users' ? 'User Management' : 'Supplier Management'}
             </h1>
             <p className="text-slate-500 text-sm font-medium">
               {currentView === 'invoices'
                 ? 'Manage and track warehouse inbound invoices'
-                : 'Manage system users and access roles'}
+                : currentView === 'users'
+                  ? 'Manage system users and access roles'
+                  : 'Manage product suppliers and vendors'}
             </p>
           </div>
 
@@ -201,6 +211,7 @@ export default function Home() {
                   partsDatabase={partsDatabase}
                   isConnected={isConnected}
                   onSave={handleSave}
+                  suppliersDatabase={suppliersDatabase}
                 />
               </div>
 
@@ -214,9 +225,13 @@ export default function Home() {
                 />
               </div>
             </div>
-          ) : (
+          ) : currentView === 'users' ? (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <UserManagement />
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <SupplierManagement />
             </div>
           )}
         </div>
@@ -224,6 +239,7 @@ export default function Home() {
 
       <LabelModal
         isOpen={isModalOpen}
+        autoCloseMs={3000}
         onClose={() => setIsModalOpen(false)}
         record={previewRecord}
       />

@@ -5,9 +5,17 @@ interface LabelModalProps {
     isOpen: boolean;
     onClose: () => void;
     record: any;
+    autoCloseMs?: number;
 }
 
-const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record }) => {
+const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record, autoCloseMs }) => {
+    React.useEffect(() => {
+        if (isOpen && autoCloseMs) {
+            const timer = setTimeout(onClose, autoCloseMs);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, autoCloseMs, onClose]);
+
     if (!isOpen || !record) return null;
 
     const handlePrint = () => window.print();

@@ -5,11 +5,12 @@ interface InvoiceFormProps {
     currentUser: { username: string };
     poDatabase: any[];
     partsDatabase: any[];
+    suppliersDatabase: any[];
     isConnected: boolean;
     onSave: (record: any) => Promise<void>;
 }
 
-const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, partsDatabase, isConnected, onSave }) => {
+const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, partsDatabase, suppliersDatabase, isConnected, onSave }) => {
     const [selectedPO, setSelectedPO] = useState("");
     const [vendor, setVendor] = useState("");
     const [partNo, setPartNo] = useState("");
@@ -20,6 +21,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, part
     const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
     const [qty, setQty] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showVendorSuggestions, setShowVendorSuggestions] = useState(false);
+    const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
 
     // PO Matching Logic
     useEffect(() => {
@@ -52,6 +55,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, part
             }
         }
     }, [partNo, partsDatabase, isKnownPO]);
+
+    // Vendor Suggestions Logic
+    useEffect(() => {
+        const filtered = suppliersDatabase.filter(s =>
+            s.name.toLowerCase().includes(vendor.toLowerCase())
+        );
+        setFilteredSuppliers(filtered);
+    }, [vendor, suppliersDatabase]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -100,20 +111,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, part
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide ml-1">Vendor Name</label>
-                        <div className="relative group">
-                            <input
-                                type="text"
-                                className="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium"
-                                placeholder="Vendor Co., Ltd."
-                                value={vendor}
-                                onChange={(e) => setVendor(e.target.value)}
-                            />
-                            <User size={16} className="absolute left-3.5 top-3.5 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
-                        </div>
-                    </div>
-
-                    <div className="space-y-1.5">
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide ml-1">Purchase Order (PO)</label>
                         <div className="relative group">
                             <input
@@ -134,6 +131,50 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, part
                                     <option key={item.id} value={item.po}>{item.partNo}</option>
                                 ))}
                             </datalist>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide ml-1">Vendor Name</label>
+                        <div className="relative group">
+                            <input
+                                type="text"
+                                className="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium"
+                                placeholder="Vendor Co., Ltd."
+                                value={vendor}
+                                onChange={(e) => {
+                                    setVendor(e.target.value);
+                                    setShowVendorSuggestions(true);
+                                }}
+                                onFocus={() => setShowVendorSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowVendorSuggestions(false), 200)}
+                            />
+                            <User size={16} className="absolute left-3.5 top-3.5 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+
+                            {showVendorSuggestions && (
+                                <div className="absolute z-50 w-full top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                                    {filteredSuppliers.length > 0 ? (
+                                        filteredSuppliers.map((supplier) => (
+                                            <button
+                                                key={supplier.id}
+                                                type="button"
+                                                className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors flex flex-col border-b border-slate-50 last:border-0"
+                                                onClick={() => {
+                                                    setVendor(supplier.name);
+                                                    setShowVendorSuggestions(false);
+                                                }}
+                                            >
+                                                <span className="font-bold text-slate-800 text-sm">{supplier.name}</span>
+                                                {supplier.country && <span className="text-[10px] text-slate-500 uppercase font-medium">{supplier.country}</span>}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-3 text-sm text-slate-500 italic">
+                                            No matching suppliers found
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

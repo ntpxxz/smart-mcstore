@@ -45,8 +45,8 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 3000 }
     const currentStyle = styles[type];
 
     return (
-        <div className="fixed bottom-6 right-6 z-[100] toast-container">
-            <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-lg ${currentStyle.bg} ${currentStyle.border} min-w-[320px] relative overflow-hidden`}>
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] toast-container">
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-xl ${currentStyle.bg} ${currentStyle.border} min-w-[320px] relative overflow-hidden`}>
                 <div className="flex-shrink-0">
                     {currentStyle.icon}
                 </div>
@@ -71,7 +71,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 3000 }
 
             <style jsx>{`
                 .toast-container {
-                    animation: slideIn 0.3s ease-out forwards;
+                    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
 
                 .progress-bar {
@@ -79,13 +79,13 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 3000 }
                     animation: progress linear forwards;
                 }
 
-                @keyframes slideIn {
+                @keyframes slideDown {
                     from {
-                        transform: translateX(100%);
+                        transform: translate(-50%, -100%);
                         opacity: 0;
                     }
                     to {
-                        transform: translateX(0);
+                        transform: translate(-50%, 0);
                         opacity: 1;
                     }
                 }

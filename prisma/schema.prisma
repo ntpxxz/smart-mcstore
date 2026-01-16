@@ -124,10 +124,25 @@ model invoice {
   invoiceDate  String?
   receivedDate String?
   qty          Int
-  recordedBy   String?
   timestamp    String
   createdAt    DateTime @default(now())
+  recordedBy   String?
   iqcstatus    String   @default("Pending")
 
   @@map("invoices")
+}
+
+model Supplier {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  country     String?
+  taxId       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("suppliers")
 }

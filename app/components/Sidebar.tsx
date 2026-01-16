@@ -9,13 +9,14 @@ import {
     LayoutDashboard,
     Settings,
     Package,
-    PackageOpen
+    PackageOpen,
+    Truck
 } from 'lucide-react';
 
 interface SidebarProps {
     currentUser: any;
-    currentView: 'invoices' | 'users';
-    setCurrentView: (view: 'invoices' | 'users') => void;
+    currentView: 'invoices' | 'users' | 'suppliers';
+    setCurrentView: (view: 'invoices' | 'users' | 'suppliers') => void;
     onLogout: () => void;
     isConnected: boolean;
     isCollapsed: boolean;
@@ -39,6 +40,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             label: 'Invoice System',
             icon: <FileText size={20} />,
             show: true
+        },
+        {
+            id: 'suppliers',
+            label: 'Suppliers',
+            icon: <Truck size={20} />,
+            show: isAdmin
         },
         {
             id: 'users',
