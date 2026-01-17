@@ -128,10 +128,10 @@ const UserManagement: React.FC = () => {
                 </button>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-semibold tracking-wider border-b border-slate-100">
+                        <thead className="bg-white/40 text-slate-500 uppercase text-xs font-semibold tracking-wider border-b border-white/50">
                             <tr>
                                 <th className="px-6 py-4">Name</th>
                                 <th className="px-6 py-4">Email</th>
@@ -162,8 +162,8 @@ const UserManagement: React.FC = () => {
                                         <td className="px-6 py-4 text-slate-600">{user.email}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${user.role === 'ADMIN' || user.role === 'Warehouse Manager'
-                                                    ? 'bg-purple-50 text-purple-700 border-purple-100'
-                                                    : 'bg-blue-50 text-blue-700 border-blue-100'
+                                                ? 'bg-purple-50 text-purple-700 border-purple-100'
+                                                : 'bg-blue-50 text-blue-700 border-blue-100'
                                                 }`}>
                                                 {user.role}
                                             </span>

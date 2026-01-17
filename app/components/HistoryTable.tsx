@@ -76,10 +76,10 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden transition-all hover:shadow-md">
-            <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
+        <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 flex flex-col overflow-hidden transition-all hover:shadow-md">
+            <div className="px-6 py-4 border-b border-white/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
-                    <div className="p-1.5 bg-slate-200 text-slate-600 rounded-lg">
+                    <div className="p-1.5 bg-slate-200/80 text-slate-600 rounded-lg">
                         <History size={18} />
                     </div>
                     Received History

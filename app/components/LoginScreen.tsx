@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, User, Lock, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Package, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, User as UserIcon, PackageOpen } from 'lucide-react';
 
 interface LoginScreenProps {
     onLogin: (user: { username: string; role: string }) => void;
@@ -8,6 +8,7 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -38,80 +39,93 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
-            <div className="bg-white/80 backdrop-blur-xl max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border border-white/50 ring-1 ring-slate-900/5">
-                <div className="bg-slate-900 p-8 text-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 opacity-50" />
-                    <div className="relative z-10">
-                        <div className="bg-white/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-md shadow-inner ring-1 ring-white/20">
-                            <Package size={32} className="text-white" />
-                        </div>
-                        <h1 className="text-2xl font-bold text-white tracking-tight">Warehouse Receiver</h1>
-                        <p className="text-slate-400 text-sm mt-1 font-medium">Secure Access Portal</p>
+        <div className="min-h-screen bg-[#AECBEB] relative overflow-hidden flex items-center justify-center p-4 font-sans">
+            {/* Background effects to mimic clouds/sky */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#BFE0F5] via-[#D6EAF8] to-[#EBF5FB]" />
+
+            {/* Cloud-like blurs */}
+            <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-white/40 rounded-full blur-[100px] opacity-60" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-white/40 rounded-full blur-[100px] opacity-60" />
+            <div className="absolute top-[40%] left-[20%] w-[30%] h-[30%] bg-white/30 rounded-full blur-[80px] opacity-40" />
+
+            {/* Top Left Logo */}
+            <div className="absolute top-8 left-8 flex items-center gap-2 z-10">
+                <div className="bg-slate-900 text-white p-1.5 rounded-lg shadow-md">
+                    <PackageOpen size={20} strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-slate-800 text-lg tracking-tight">One Invoice</span>
+            </div>
+
+            {/* Main Card */}
+            <div className="bg-white/60 backdrop-blur-2xl max-w-[420px] w-full rounded-[32px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] p-10 relative z-10 border border-white/60">
+                <div className="flex flex-col items-center mb-8">
+                    <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-5 border border-white/50">
+                        <ArrowRight size={24} className="text-slate-900" strokeWidth={2.5} />
                     </div>
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Login With Username</h1>
                 </div>
 
-                <div className="p-8">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block ml-1">Username</label>
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <User className="text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                                </div>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 placeholder:text-slate-400"
-                                    placeholder="Enter username"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                />
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-1">
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <UserIcon className="text-slate-400" size={18} />
                             </div>
+                            <input
+                                type="text"
+                                required
+                                className="w-full pl-11 pr-4 py-3.5 bg-[#F0F2F5]/80 hover:bg-[#F0F2F5] focus:bg-white border border-transparent focus:border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none transition-all font-medium text-slate-700 placeholder:text-slate-400"
+                                placeholder="Username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                            />
                         </div>
+                    </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block ml-1">Password</label>
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Lock className="text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                                </div>
-                                <input
-                                    type="password"
-                                    required
-                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 placeholder:text-slate-400"
-                                    placeholder="Enter password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
+                    <div className="space-y-1">
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <Lock className="text-slate-400" size={18} />
                             </div>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                required
+                                className="w-full pl-11 pr-12 py-3.5 bg-[#F0F2F5]/80 hover:bg-[#F0F2F5] focus:bg-white border border-transparent focus:border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none transition-all font-medium text-slate-700 placeholder:text-slate-400"
+                                placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
+                    </div>
 
-                        {error && (
-                            <div className="p-3 bg-red-50/50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm animate-in fade-in slide-in-from-top-2">
-                                <AlertCircle size={18} className="shrink-0" />
-                                <span className="font-medium">{error}</span>
-                            </div>
+
+
+                    {error && (
+                        <div className="p-3 bg-red-50/80 border border-red-100 text-red-600 text-sm rounded-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                            <AlertCircle size={16} className="shrink-0" />
+                            <span className="font-medium">{error}</span>
+                        </div>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-[#1A1A1A] hover:bg-black text-white py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 active:scale-[0.98] mt-2 flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            "Get Started"
                         )}
-
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-slate-900/20 hover:shadow-slate-900/30 active:scale-[0.98]"
-                        >
-                            {isLoading ? (
-                                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <>
-                                    <ShieldCheck size={18} />
-                                    <span>Login</span>
-                                </>
-                            )}
-                        </button>
-                    </form>
-
-
-                </div>
+                    </button>
+                </form>
             </div>
         </div>
     );

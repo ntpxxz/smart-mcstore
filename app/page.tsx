@@ -172,70 +172,80 @@ export default function Home() {
   if (!currentUser) return <LoginScreen onLogin={handleLogin} />;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-800 font-sans">
-      <Sidebar
-        currentUser={currentUser}
-        currentView={currentView}
-        setCurrentView={setCurrentView}
-        onLogout={handleLogout}
-        isConnected={isConnected}
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
-      />
+    <div className="min-h-screen bg-[#AECBEB] relative overflow-hidden font-sans text-slate-800">
+      {/* Background effects to mimic clouds/sky */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#BFE0F5] via-[#D6EAF8] to-[#EBF5FB] z-0" />
 
-      <main
-        className={`transition-all duration-300 p-4 sm:p-6 lg:p-8 min-h-screen ${isSidebarCollapsed ? 'ml-20' : 'ml-72'
-          }`}
-      >
-        <div className="max-w-[1600px] mx-auto space-y-8">
-          {/* Page Header */}
-          <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              {currentView === 'invoices' ? 'Invoice System' : currentView === 'users' ? 'User Management' : 'Supplier Management'}
-            </h1>
-            <p className="text-slate-500 text-sm font-medium">
-              {currentView === 'invoices'
-                ? 'Manage and track warehouse inbound invoices'
-                : currentView === 'users'
-                  ? 'Manage system users and access roles'
-                  : 'Manage product suppliers and vendors'}
-            </p>
+      {/* Cloud-like blurs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-white/40 rounded-full blur-[100px] opacity-60 z-0" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-white/40 rounded-full blur-[100px] opacity-60 z-0" />
+      <div className="absolute top-[40%] left-[20%] w-[30%] h-[30%] bg-white/30 rounded-full blur-[80px] opacity-40 z-0" />
+
+      <div className="relative z-10 flex">
+        <Sidebar
+          currentUser={currentUser}
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+          onLogout={handleLogout}
+          isConnected={isConnected}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
+
+        <main
+          className={`transition-all duration-300 p-4 sm:p-6 lg:p-8 min-h-screen flex-1 ${isSidebarCollapsed ? 'ml-20' : 'ml-72'
+            }`}
+        >
+          <div className="max-w-[1600px] mx-auto space-y-8">
+            {/* Page Header */}
+            <div className="flex flex-col gap-1">
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+                {currentView === 'invoices' ? 'Invoice System' : currentView === 'users' ? 'User Management' : 'Supplier Management'}
+              </h1>
+              <p className="text-slate-600 text-sm font-medium">
+                {currentView === 'invoices'
+                  ? 'Manage and track warehouse inbound invoices'
+                  : currentView === 'users'
+                    ? 'Manage system users and access roles'
+                    : 'Manage product suppliers and vendors'}
+              </p>
+            </div>
+
+            {currentView === 'invoices' ? (
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="xl:col-span-6 2xl:col-span-4 space-y-6">
+                  <InvoiceForm
+                    currentUser={currentUser}
+                    poDatabase={poDatabase}
+                    partsDatabase={partsDatabase}
+                    isConnected={isConnected}
+                    onSave={handleSave}
+                    suppliersDatabase={suppliersDatabase}
+                  />
+                </div>
+
+                <div className="xl:col-span-6 2xl:col-span-8">
+                  <HistoryTable
+                    history={history}
+                    isConnected={isConnected}
+                    onDelete={deleteRecord}
+                    onPreview={(rec) => { setPreviewRecord(rec); setIsModalOpen(true); }}
+                    onUpdateStatus={updateStatus}
+                  />
+                </div>
+              </div>
+            ) : currentView === 'users' ? (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <UserManagement />
+              </div>
+            ) : (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <SupplierManagement />
+              </div>
+            )}
           </div>
-
-          {currentView === 'invoices' ? (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="xl:col-span-6 2xl:col-span-4 space-y-6">
-                <InvoiceForm
-                  currentUser={currentUser}
-                  poDatabase={poDatabase}
-                  partsDatabase={partsDatabase}
-                  isConnected={isConnected}
-                  onSave={handleSave}
-                  suppliersDatabase={suppliersDatabase}
-                />
-              </div>
-
-              <div className="xl:col-span-6 2xl:col-span-8">
-                <HistoryTable
-                  history={history}
-                  isConnected={isConnected}
-                  onDelete={deleteRecord}
-                  onPreview={(rec) => { setPreviewRecord(rec); setIsModalOpen(true); }}
-                  onUpdateStatus={updateStatus}
-                />
-              </div>
-            </div>
-          ) : currentView === 'users' ? (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <UserManagement />
-            </div>
-          ) : (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <SupplierManagement />
-            </div>
-          )}
-        </div>
-      </main>
+        </main>
+      </div>
 
       <LabelModal
         isOpen={isModalOpen}

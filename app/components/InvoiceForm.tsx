@@ -98,10 +98,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ currentUser, poDatabase, part
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden transition-all hover:shadow-md">
+            <div className="px-6 py-4 border-b border-white/50 flex items-center justify-between bg-white/40">
                 <h2 className="font-bold text-slate-800 flex items-center gap-2.5">
-                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                    <div className="p-1.5 bg-blue-100/80 text-blue-600 rounded-lg">
                         <FileText size={18} />
                     </div>
                     New Invoice Record

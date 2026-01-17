@@ -174,10 +174,10 @@ const SupplierManagement: React.FC = () => {
                 </button>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-semibold tracking-wider border-b border-slate-100">
+                        <thead className="bg-white/40 text-slate-500 uppercase text-xs font-semibold tracking-wider border-b border-white/50">
                             <tr>
                                 <th className="px-6 py-4">Supplier Name</th>
                                 <th className="px-6 py-4">Contact</th>
