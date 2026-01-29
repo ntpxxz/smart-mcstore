@@ -146,3 +146,18 @@ model Supplier {
 
   @@map("suppliers")
 }
+model InboundTask {
+  id           Int      @id @default(autoincrement())
+  po           String
+  vendor       String?
+  partNo       String
+  partName     String
+  qty          Int
+  invoiceNo    String?
+  externalDate String?
+  status       String   @default("Pending") // Pending, Completed, Cancelled
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("inbound_tasks")
+}

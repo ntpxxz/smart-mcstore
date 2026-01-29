@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 interface ToastProps {
     message: string;
@@ -39,6 +39,13 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 3000 }
             text: 'text-blue-800',
             icon: <AlertCircle className="text-blue-500" size={20} />,
             progress: 'bg-blue-500'
+        },
+        warning: {
+            bg: 'bg-amber-50',
+            border: 'border-amber-100',
+            text: 'text-amber-800',
+            icon: <AlertCircle className="text-amber-500" size={20} />,
+            progress: 'bg-amber-500'
         }
     };
 

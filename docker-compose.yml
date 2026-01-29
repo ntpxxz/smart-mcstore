@@ -14,19 +14,6 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - app-net
-
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: rootpg
-      POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: warehouse
-    container_name: pg-main
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app-net
-
   db-dev:
     image: postgres:15
     container_name: pg-dev

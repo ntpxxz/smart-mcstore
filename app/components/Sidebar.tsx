@@ -15,8 +15,8 @@ import {
 
 interface SidebarProps {
     currentUser: any;
-    currentView: 'invoices' | 'users' | 'suppliers';
-    setCurrentView: (view: 'invoices' | 'users' | 'suppliers') => void;
+    currentView: 'invoices' | 'users' | 'suppliers' | 'history';
+    setCurrentView: (view: 'invoices' | 'users' | 'suppliers' | 'history') => void;
     onLogout: () => void;
     isConnected: boolean;
     isCollapsed: boolean;
@@ -37,8 +37,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     const menuItems = [
         {
             id: 'invoices',
-            label: 'Invoice System',
+            label: 'Inbound Tasks',
             icon: <FileText size={20} />,
+            show: true
+        },
+        {
+            id: 'history',
+            label: 'Received History',
+            icon: <Database size={20} />,
             show: true
         },
         {

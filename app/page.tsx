@@ -8,6 +8,7 @@ import HistoryTable from './components/HistoryTable';
 import LabelModal from './components/LabelModal';
 import UserManagement from './components/UserManagement';
 import SupplierManagement from './components/SupplierManagement';
+import TaskQueue from './components/TaskQueue';
 import Toast, { ToastType } from './components/Toast';
 
 const API_BASE_URL = '/api';
@@ -15,7 +16,7 @@ const API_BASE_URL = '/api';
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [currentView, setCurrentView] = useState<'invoices' | 'users' | 'suppliers'>('invoices');
+  const [currentView, setCurrentView] = useState<'invoices' | 'users' | 'suppliers' | 'history'>('invoices');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Data State
@@ -23,6 +24,8 @@ export default function Home() {
   const [poDatabase, setPoDatabase] = useState<any[]>([]);
   const [partsDatabase, setPartsDatabase] = useState<any[]>([]);
   const [suppliersDatabase, setSuppliersDatabase] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,6 +67,12 @@ export default function Home() {
       if (suppliersRes.ok) {
         const suppliersData = await suppliersRes.json();
         setSuppliersDatabase(suppliersData);
+      }
+
+      const tasksRes = await fetch(`${API_BASE_URL}/tasks`);
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        setTasks(tasksData);
       }
 
       setIsConnected(true);
@@ -118,6 +127,87 @@ export default function Home() {
 
     setPreviewRecord(newRecord);
     setIsModalOpen(true);
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/sync`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || "Sync completed!");
+        fetchData();
+      } else {
+        showToast(data.error || "Sync failed", "error");
+      }
+    } catch (err) {
+      console.error("Sync failed", err);
+      showToast("Connection error during sync", "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleProcessTask = async (task: any) => {
+    // Prepare invoice record from task
+    const newRecord = {
+      po: task.po,
+      vendor: task.vendor,
+      partNo: task.partNo,
+      partName: task.partName,
+      invoice: task.invoiceNo || `INV-${task.po.split('-').pop()}-${Date.now().toString().slice(-4)}`,
+      invoiceDate: new Date().toISOString().split('T')[0],
+      receivedDate: new Date().toISOString().split('T')[0],
+      qty: task.qty.toString(),
+      user: currentUser.username,
+      iqcstatus: 'Pending',
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      // 1. Save as Invoice
+      await handleSave(newRecord);
+
+      // 2. Update Task Status to Completed
+      await fetch(`${API_BASE_URL}/tasks`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: task.id, status: 'Completed' })
+      });
+
+      // 3. Notify Warehouse Mobile System
+      try {
+        const notifyRes = await fetch(`${API_BASE_URL}/notify-warehouse`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task,
+            invoice: newRecord.invoice,
+            user: currentUser.username
+          })
+        });
+
+        if (notifyRes.ok) {
+          const notifyData = await notifyRes.json();
+          console.log('✅ Warehouse Mobile Notified:', notifyData);
+          showToast('📱 Notification sent to warehouse mobile', 'success');
+        } else {
+          console.warn('⚠️ Failed to notify warehouse mobile');
+          showToast('Warning: Warehouse mobile notification failed', 'warning');
+        }
+      } catch (notifyErr) {
+        console.error('Notify error:', notifyErr);
+        // Continue anyway - notification failure shouldn't block the process
+      }
+
+      // 4. Refresh data
+      fetchData();
+
+      showToast('✅ Tracking printed & notification sent!', 'success');
+    } catch (err) {
+      console.error("Failed to process task", err);
+      showToast('Failed to process task', 'error');
+    }
   };
 
   const deleteRecord = async (id: any) => {
@@ -200,39 +290,37 @@ export default function Home() {
             {/* Page Header */}
             <div className="flex flex-col gap-1">
               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                {currentView === 'invoices' ? 'Invoice System' : currentView === 'users' ? 'User Management' : 'Supplier Management'}
+                {currentView === 'invoices' ? 'Inbound Tasks' : currentView === 'history' ? 'Received History' : currentView === 'users' ? 'User Management' : 'Supplier Management'}
               </h1>
               <p className="text-slate-600 text-sm font-medium">
                 {currentView === 'invoices'
-                  ? 'Manage and track warehouse inbound invoices'
-                  : currentView === 'users'
-                    ? 'Manage system users and access roles'
-                    : 'Manage product suppliers and vendors'}
+                  ? 'Manage and track warehouse inbound tasks'
+                  : currentView === 'history'
+                    ? 'View and export received invoice history'
+                    : currentView === 'users'
+                      ? 'Manage system users and access roles'
+                      : 'Manage product suppliers and vendors'}
               </p>
             </div>
 
             {currentView === 'invoices' ? (
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="xl:col-span-6 2xl:col-span-4 space-y-6">
-                  <InvoiceForm
-                    currentUser={currentUser}
-                    poDatabase={poDatabase}
-                    partsDatabase={partsDatabase}
-                    isConnected={isConnected}
-                    onSave={handleSave}
-                    suppliersDatabase={suppliersDatabase}
-                  />
-                </div>
-
-                <div className="xl:col-span-6 2xl:col-span-8">
-                  <HistoryTable
-                    history={history}
-                    isConnected={isConnected}
-                    onDelete={deleteRecord}
-                    onPreview={(rec) => { setPreviewRecord(rec); setIsModalOpen(true); }}
-                    onUpdateStatus={updateStatus}
-                  />
-                </div>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <TaskQueue
+                  tasks={tasks}
+                  onSync={handleSync}
+                  onProcess={handleProcessTask}
+                  isSyncing={isSyncing}
+                />
+              </div>
+            ) : currentView === 'history' ? (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <HistoryTable
+                  history={history}
+                  isConnected={isConnected}
+                  onDelete={deleteRecord}
+                  onPreview={(rec) => { setPreviewRecord(rec); setIsModalOpen(true); }}
+                  onUpdateStatus={updateStatus}
+                />
               </div>
             ) : currentView === 'users' ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
