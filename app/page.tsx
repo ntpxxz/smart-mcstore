@@ -30,6 +30,7 @@ export default function Home() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewRecord, setPreviewRecord] = useState<any>(null);
+  const [canPrintLabel, setCanPrintLabel] = useState(true);
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -126,6 +127,7 @@ export default function Home() {
     }
 
     setPreviewRecord(newRecord);
+    setCanPrintLabel(true);
     setIsModalOpen(true);
   };
 
@@ -165,17 +167,24 @@ export default function Home() {
     };
 
     try {
-      // 1. Save as Invoice
-      await handleSave(newRecord);
+      // 1. Generate Tag Number if not exists
+      const tagNo = task.tagNo || `TAG-${Date.now().toString().slice(-8)}`;
 
-      // 2. Update Task Status to Completed
+      // 2. Save as Invoice (Mark as documented in history)
+      await handleSave({ ...newRecord, tagNo });
+
+      // 3. Update Task Status to PENDING
       await fetch(`${API_BASE_URL}/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: task.id, status: 'Completed' })
+        body: JSON.stringify({
+          id: task.id,
+          status: 'PENDING',
+          tagNo: tagNo
+        })
       });
 
-      // 3. Notify Warehouse Mobile System
+      // 4. Notify Warehouse Mobile System
       try {
         const notifyRes = await fetch(`${API_BASE_URL}/notify-warehouse`, {
           method: 'POST',
@@ -197,13 +206,12 @@ export default function Home() {
         }
       } catch (notifyErr) {
         console.error('Notify error:', notifyErr);
-        // Continue anyway - notification failure shouldn't block the process
       }
 
-      // 4. Refresh data
+      // 5. Refresh data
       fetchData();
-
       showToast('✅ Tracking printed & notification sent!', 'success');
+
     } catch (err) {
       console.error("Failed to process task", err);
       showToast('Failed to process task', 'error');
@@ -318,8 +326,8 @@ export default function Home() {
                   history={history}
                   isConnected={isConnected}
                   onDelete={deleteRecord}
-                  onPreview={(rec) => { setPreviewRecord(rec); setIsModalOpen(true); }}
                   onUpdateStatus={updateStatus}
+                  onPreview={(rec) => { setPreviewRecord(rec); setCanPrintLabel(false); setIsModalOpen(true); }}
                 />
               </div>
             ) : currentView === 'users' ? (
@@ -337,9 +345,10 @@ export default function Home() {
 
       <LabelModal
         isOpen={isModalOpen}
-        autoCloseMs={3000}
+        autoCloseMs={10000}
         onClose={() => setIsModalOpen(false)}
         record={previewRecord}
+        canPrint={canPrintLabel}
       />
 
       {toast && (

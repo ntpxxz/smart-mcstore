@@ -5,36 +5,34 @@ const prisma = new PrismaClient();
 
 async function main() {
     // 1. Seed Users
-    const adminPassword = await bcrypt.hash('admin123', 10);
-    const operatorPassword = await bcrypt.hash('operator123', 10);
+    const hashedPassword = await bcrypt.hash('password123', 10);
 
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@example.com' },
+        where: { username: 'admin' },
         update: {},
         create: {
-            id: 'user-admin',
-            email: 'admin@example.com',
-            name: 'Admin',
-            password: adminPassword,
+            username: 'admin',
+            email: 'admin@warehouse.os',
+            password: hashedPassword,
             role: 'ADMIN',
-            updatedAt: new Date(),
+            section: 'WAREHOUSE'
         },
     });
 
     const operator = await prisma.user.upsert({
-        where: { email: 'operator@example.com' },
+        where: { username: 'operator' },
         update: {},
         create: {
-            id: 'user-operator',
+            username: 'operator',
             email: 'operator@example.com',
-            name: 'Operator',
-            password: operatorPassword,
-            role: 'OPERATOR',
-            updatedAt: new Date(),
+            password: hashedPassword,
+            role: 'USER',
+            section: 'IQC'
         },
     });
 
     console.log('Users seeded:', { admin, operator });
+
 
     // 2. Seed Suppliers
     const suppliersData = [

@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { History, Filter, X, Download, ArrowUpDown, Printer, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { History, Filter, X, Download, ArrowUpDown, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HistoryTableProps {
     history: any[];
     isConnected: boolean;
     onDelete: (id: any) => void;
-    onPreview: (record: any) => void;
     onUpdateStatus: (id: any, status: string) => void;
+    onPreview?: (record: any) => void;
 }
 
-const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDelete, onPreview, onUpdateStatus }) => {
+const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDelete, onUpdateStatus, onPreview }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'timestamp', direction: 'desc' });
     const [currentPage, setCurrentPage] = useState(1);
@@ -141,7 +141,11 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
                             </tr>
                         ) : (
                             currentTableData.map((rec) => (
-                                <tr key={rec.id} className="hover:bg-blue-50/30 transition-colors group">
+                                <tr
+                                    key={rec.id}
+                                    className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
+                                    onClick={() => onPreview && onPreview(rec)}
+                                >
                                     <td className="px-6 py-4 text-slate-500 whitespace-nowrap text-xs font-medium">{formatDate(rec.timestamp)}</td>
                                     <td className="px-6 py-4 font-medium text-slate-800 truncate max-w-[150px]" title={rec.vendor}>{rec.vendor || "-"}</td>
                                     <td className="px-6 py-4 font-mono text-xs text-slate-600 bg-slate-50/50 rounded px-2 py-1 w-fit">{rec.invoice}</td>
@@ -165,13 +169,6 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
                                     <td className="px-6 py-4 text-xs text-slate-500">{rec.recordedBy || "-"}</td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button
-                                                onClick={() => onPreview(rec)}
-                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                title="Print Label"
-                                            >
-                                                <Printer size={16} />
-                                            </button>
                                             <button
                                                 onClick={() => onDelete(rec.id)}
                                                 className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"

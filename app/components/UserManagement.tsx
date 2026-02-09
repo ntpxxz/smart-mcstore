@@ -4,7 +4,7 @@ import { Users, UserPlus, Edit2, Trash2, Shield, Mail, User as UserIcon, X, Chec
 interface User {
     id: string;
     email: string;
-    name: string;
+    username: string; // Changed from name to username
     role: string;
     createdAt: string;
 }
@@ -18,7 +18,7 @@ const UserManagement: React.FC = () => {
     // Form State
     const [formData, setFormData] = useState({
         email: '',
-        name: '',
+        username: '', // Changed from name to username
         password: '',
         role: 'OPERATOR'
     });
@@ -49,7 +49,7 @@ const UserManagement: React.FC = () => {
             setEditingUser(user);
             setFormData({
                 email: user.email,
-                name: user.name,
+                username: user.username,
                 password: '', // Don't show password
                 role: user.role
             });
@@ -57,7 +57,7 @@ const UserManagement: React.FC = () => {
             setEditingUser(null);
             setFormData({
                 email: '',
-                name: '',
+                username: '',
                 password: '',
                 role: 'OPERATOR'
             });
@@ -133,7 +133,7 @@ const UserManagement: React.FC = () => {
                     <table className="w-full text-left text-sm">
                         <thead className="bg-white/40 text-slate-500 uppercase text-xs font-semibold tracking-wider border-b border-white/50">
                             <tr>
-                                <th className="px-6 py-4">Name</th>
+                                <th className="px-6 py-4">Username</th>
                                 <th className="px-6 py-4">Email</th>
                                 <th className="px-6 py-4">Role</th>
                                 <th className="px-6 py-4">Created At</th>
@@ -158,7 +158,7 @@ const UserManagement: React.FC = () => {
                             ) : (
                                 users.map((user) => (
                                     <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-6 py-4 font-bold text-slate-800">{user.name}</td>
+                                        <td className="px-6 py-4 font-bold text-slate-800">{user.username}</td>
                                         <td className="px-6 py-4 text-slate-600">{user.email}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${user.role === 'ADMIN' || user.role === 'Warehouse Manager'
@@ -211,15 +211,15 @@ const UserManagement: React.FC = () => {
 
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Full Name</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Username</label>
                                 <div className="relative group">
                                     <input
                                         type="text"
                                         required
                                         className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                                        placeholder="John Doe"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="johndoe"
+                                        value={formData.username}
+                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                     />
                                     <UserIcon size={16} className="absolute left-3.5 top-3 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                                 </div>
@@ -239,6 +239,9 @@ const UserManagement: React.FC = () => {
                                     <Mail size={16} className="absolute left-3.5 top-3 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                                 </div>
                             </div>
+
+
+
 
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-slate-500 uppercase ml-1">

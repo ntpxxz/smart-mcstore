@@ -43,27 +43,46 @@ export async function POST() {
 
             if (!po || !partNo) continue;
 
-            // Check for duplicates (PO + PartNo + InvoiceNo + Status Pending)
+            const parseDate = (dateStr: string) => {
+                if (!dateStr) return null;
+                // Try DD/MM/YYYY
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    const day = parseInt(parts[0]);
+                    const month = parseInt(parts[1]) - 1;
+                    const year = parseInt(parts[2]);
+                    const date = new Date(year, month, day);
+                    if (!isNaN(date.getTime())) return date;
+                }
+                // Fallback to default
+                const date = new Date(dateStr);
+                return isNaN(date.getTime()) ? null : date;
+            };
+
+            const parsedDueDate = parseDate(externalDate);
+
+            // Check for duplicates (PO + PartNo + InvoiceNo + Status Pending or Arrived)
             const existing = await prisma.inboundTask.findFirst({
                 where: {
-                    po,
+                    poNo: po,
                     partNo,
                     invoiceNo,
-                    status: 'Pending'
+                    vendor // Added vendor to match @@unique([invoiceNo, partNo, vendor])
+                    // Removed status check because unique constraint applies regardless of status
                 }
             });
 
             if (!existing) {
                 await prisma.inboundTask.create({
                     data: {
-                        po,
+                        poNo: po,
                         vendor,
                         partNo,
                         partName,
-                        qty,
+                        planQty: qty,
                         invoiceNo,
-                        externalDate,
-                        status: 'Pending'
+                        dueDate: parsedDueDate,
+                        status: 'ARRIVED'
                     }
                 });
                 addedCount++;

@@ -10,23 +10,36 @@ export async function PUT(
     const { id } = await params;
     try {
         const body = await request.json();
-        const { email, name, role, password } = body;
+        const { email, username, role, password } = body;
 
         const updateData: any = {
             email,
-            name,
+            username,
             role,
             updatedAt: new Date()
         };
 
         if (password) {
             // Hash the new password
+            updateData.password = await bcrypt.hash(password, 10); // Fixed potential issue with duplicate password declaration in original code if any
+        }
+
+        // Ensure password is not in updateData if empty string
+        if (!password) {
+            delete updateData.password;
+        } else {
             updateData.password = await bcrypt.hash(password, 10);
         }
 
         const updatedUser = await prisma.user.update({
             where: { id },
-            data: updateData
+            data: {
+                email,
+                username,
+                role,
+                updatedAt: new Date(),
+                ...(password ? { password: await bcrypt.hash(password, 10) } : {})
+            }
         });
 
         const { password: _, ...userWithoutPassword } = updatedUser;

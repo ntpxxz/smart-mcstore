@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { ClipboardList, RefreshCw, Printer, CheckCircle2, Clock, ChevronLeft, ChevronRight, X, Info } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ClipboardList, RefreshCw, Printer, CheckCircle2, Clock, ChevronLeft, ChevronRight, X, Info, ArrowUpDown } from 'lucide-react';
 
 interface Task {
-    id: number;
+    id: string;
     po: string;
     vendor: string;
     partNo: string;
@@ -11,6 +11,8 @@ interface Task {
     invoiceNo: string;
     externalDate: string;
     status: string;
+    displayStatus?: string;
+    tagNo?: string | null;
     createdAt: string;
 }
 
@@ -24,26 +26,55 @@ interface TaskQueueProps {
 const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSyncing }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const itemsPerPage = 5;
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'createdAt', direction: 'desc' });
+    const itemsPerPage = 10;
 
-    const pendingTasks = tasks.filter(t => t.status === 'Pending');
-    const completedTasks = tasks.filter(t => t.status === 'Completed');
+    const processedTasks = useMemo(() => {
+        let data = tasks.filter(t => t.status.toUpperCase() === 'ARRIVED');
 
-    // Pagination Logic
-    const totalPages = Math.ceil(pendingTasks.length / itemsPerPage);
-    const currentTasks = pendingTasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+        if (sortConfig.key) {
+            data.sort((a: any, b: any) => {
+                const valA = a[sortConfig.key] || "";
+                const valB = b[sortConfig.key] || "";
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return data;
+    }, [tasks, sortConfig]);
+
+    const totalPages = Math.ceil(processedTasks.length / itemsPerPage);
+    const currentTasks = processedTasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const requestSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+        setSortConfig({ key, direction });
+    };
+
+    const formatDate = (dateStr: string) => {
+        try {
+            const date = new Date(dateStr);
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        } catch (e) {
+            return dateStr;
+        }
+    };
 
     return (
         <div className="space-y-6">
-            {/* Header with Sync Button */}
-            <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden">
-                <div className="px-6 py-4 flex items-center justify-between bg-white/40">
-                    <h2 className="font-bold text-slate-800 flex items-center gap-2.5">
+            <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden transition-all hover:shadow-md">
+                <div className="px-6 py-4 border-b border-white/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
                         <div className="p-1.5 bg-indigo-100/80 text-indigo-600 rounded-lg">
                             <ClipboardList size={18} />
                         </div>
-                        Inbound Tasks
-                    </h2>
+                        Inbound Tasks (ARRIVED)
+                    </h3>
                     <button
                         onClick={onSync}
                         disabled={isSyncing}
@@ -54,121 +85,110 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
                     </button>
                 </div>
 
-                <div className="p-6">
-                    {pendingTasks.length === 0 ? (
-                        <div className="text-center py-12 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                            <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
-                                <Clock size={24} />
-                            </div>
-                            <p className="text-slate-500 font-medium">No pending tasks</p>
-                            <p className="text-slate-400 text-xs mt-1">Click Sync to fetch new data from API</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {currentTasks.map((task) => (
-                                <div
-                                    key={task.id}
-                                    className="group relative bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-md transition-all duration-300 cursor-pointer"
-                                    onClick={() => setSelectedTask(task)}
-                                >
-                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                            {/* Received Time */}
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Received Time</p>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-700">
-                                                        {new Date(task.createdAt).toLocaleDateString('en-GB')}
-                                                    </span>
-                                                    <span className="text-xs text-slate-400 font-medium">
-                                                        {new Date(task.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
+                <div className="p-6 pt-2">
+                    <div className="overflow-x-auto -mx-6">
+                        <table className="w-full text-left text-sm min-w-[1000px]">
+                            <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-semibold tracking-wider border-b border-slate-100">
+                                <tr>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('createdAt')}>
+                                        Received Date <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('vendor')}>
+                                        Vendor <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('po')}>
+                                        PO / Invoice <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('partNo')}>
+                                        Part # <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    </th>
+                                    <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('qty')}>
+                                        Qty <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    </th>
+                                    <th className="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {processedTasks.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-12 text-center">
+                                            <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
+                                                <div className="p-3 bg-slate-50 rounded-full">
+                                                    <Clock size={24} className="opacity-50" />
                                                 </div>
+                                                <p className="text-sm font-medium">No arrived tasks found</p>
+                                                <p className="text-xs">Tasks will appear here once they are received</p>
                                             </div>
-
-                                            {/* PO & Invoice */}
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">PO / Invoice</p>
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    currentTasks.map((task) => (
+                                        <tr key={task.id} className="hover:bg-blue-50/30 transition-colors group cursor-pointer" onClick={() => setSelectedTask(task)}>
+                                            <td className="px-6 py-4 text-slate-500 whitespace-nowrap text-xs font-medium">
+                                                {formatDate(task.createdAt)}
+                                            </td>
+                                            <td className="px-6 py-4 font-medium text-slate-800 truncate max-w-[200px]" title={task.vendor}>
+                                                {task.vendor || "-"}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 font-mono">
                                                         {task.po}
                                                     </span>
                                                     {task.invoiceNo && (
-                                                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                                                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 font-mono">
                                                             {task.invoiceNo}
                                                         </span>
                                                     )}
                                                 </div>
-                                            </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-mono text-xs font-bold text-slate-900">{task.partNo}</div>
+                                                <div className="text-[10px] text-slate-400 truncate max-w-[200px]">{task.partName}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold text-slate-800">{task.qty}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                        onClick={() => onProcess(task)}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
+                                                    >
+                                                        <Printer size={14} />
+                                                        Print
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                                            {/* Part Number */}
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Part Number</p>
-                                                <p className="font-bold text-slate-800 font-mono">{task.partNo}</p>
-                                            </div>
-
-                                            {/* Quantity */}
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Quantity</p>
-                                                <p className="font-bold text-slate-900 text-lg">{task.qty} <span className="text-xs text-slate-400 font-normal">PCS</span></p>
-                                            </div>
-
-                                            {/* Description */}
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description</p>
-                                                <p className="text-sm text-slate-600 line-clamp-1 italic" title={task.partName}>
-                                                    {task.partName}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-3 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                                            <div className="hidden lg:block h-10 w-px bg-slate-100 mx-2" />
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onProcess(task);
-                                                }}
-                                                className="w-full lg:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95"
-                                            >
-                                                <Printer size={18} />
-                                                Print Tracking
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {/* Pagination Controls */}
-                            {totalPages > 1 && (
-                                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                                    <span className="text-xs text-slate-500 font-medium">
-                                        Page {currentPage} of {totalPages}
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                            disabled={currentPage === 1}
-                                            className="p-2 border border-slate-200 rounded-lg disabled:opacity-30 transition-all hover:bg-slate-50"
-                                        >
-                                            <ChevronLeft size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                            disabled={currentPage === totalPages}
-                                            className="p-2 border border-slate-200 rounded-lg disabled:opacity-30 transition-all hover:bg-slate-50"
-                                        >
-                                            <ChevronRight size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 -mx-6 -mb-6">
+                            <div className="text-xs font-medium text-slate-500">Page {currentPage} of {totalPages}</div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-2 border border-slate-200 rounded-lg text-xs bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="p-2 border border-slate-200 rounded-lg text-xs bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Task Detail Modal */}
             {selectedTask && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
@@ -229,7 +249,7 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
                                     className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 transition-all"
                                 >
                                     <Printer size={18} />
-                                    Print Tracking
+                                    Print Label
                                 </button>
                                 <button
                                     onClick={() => setSelectedTask(null)}
@@ -242,37 +262,6 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
                     </div>
                 </div>
             )}
-
-            {/* History Section (Optional/Collapsed) */}
-            {/*
-            {completedTasks.length > 0 && (
-                <div className="bg-white/40 backdrop-blur-sm rounded-2xl border border-white/40 overflow-hidden">
-                    <div className="px-6 py-3 border-b border-white/20 flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-slate-600 flex items-center gap-2">
-                            <CheckCircle2 size={16} className="text-green-500" />
-                            Recently Completed
-                        </h3>
-                        <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">
-                            {completedTasks.length}
-                        </span>
-                    </div>
-                    <div className="divide-y divide-white/20">
-                        {completedTasks.slice(0, 5).map((task) => (
-                            <div key={task.id} className="px-6 py-3 flex items-center justify-between text-xs">
-                                <div className="flex items-center gap-3">
-                                    <span className="font-mono font-bold text-slate-500">{task.po}</span>
-                                    <span className="text-slate-400">|</span>
-                                    <span className="text-slate-600">{task.partNo}</span>
-                                </div>
-                                <span className="text-slate-400 italic">
-                                    {new Date(task.createdAt).toLocaleDateString()}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-                */}
         </div>
     );
 };

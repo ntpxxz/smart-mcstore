@@ -4,7 +4,7 @@ import prisma from '@/lib/db';
 export async function GET() {
     try {
         const invoices = await prisma.invoice.findMany({
-            orderBy: { timestamp: 'desc' }
+            orderBy: { createdAt: 'desc' }
         });
         return NextResponse.json(invoices);
     } catch (err) {
@@ -16,51 +16,24 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { po, vendor, partNo, partName, invoice, invoiceDate, receivedDate, qty, timestamp, user } = body;
+        // The frontend passes fields that match model invoice: 
+        // po, vendor, partNo, partName, invoice, qty, etc.
 
         const newInvoice = await prisma.invoice.create({
             data: {
-                po,
-                vendor,
-                partNo,
-                partName,
-                invoice,
-                invoiceDate,
-                receivedDate,
-                qty: parseInt(qty),
-                recordedBy: user,
-                timestamp
+                po: body.po,
+                vendor: body.vendor,
+                partNo: body.partNo,
+                partName: body.partName,
+                invoice: body.invoice,
+                invoiceDate: body.invoiceDate,
+                receivedDate: body.receivedDate,
+                qty: parseInt(body.qty) || 0,
+                recordedBy: body.recordedBy || body.user,
+                timestamp: body.timestamp || new Date().toISOString(),
+                iqcstatus: body.iqcstatus || 'Pending'
             }
         });
-
-        // System Function: Update Part Inventory and Create Movement
-        try {
-            const part = await prisma.part.findUnique({
-                where: { sku: partNo }
-            });
-
-            if (part) {
-                await prisma.part.update({
-                    where: { id: part.id },
-                    data: { qty: part.qty + parseInt(qty) }
-                });
-
-                // Create a movement record
-                await prisma.movement.create({
-                    data: {
-                        id: `MOV-${Date.now()}`,
-                        date: new Date(),
-                        qty: parseInt(qty),
-                        source: vendor || 'Supplier',
-                        destination: part.location || 'Warehouse',
-                        type: 'INBOUND',
-                        partId: part.id
-                    }
-                });
-            }
-        } catch (inventoryErr) {
-            console.error('Inventory Update Error:', inventoryErr);
-        }
 
         return NextResponse.json(newInvoice);
     } catch (err) {

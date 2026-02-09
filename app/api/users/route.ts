@@ -9,7 +9,7 @@ export async function GET() {
             select: {
                 id: true,
                 email: true,
-                name: true,
+                username: true,
                 role: true,
                 createdAt: true,
                 updatedAt: true
@@ -27,9 +27,9 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { email, password, name, role } = body;
+        const { email, password, username, role } = body;
 
-        if (!email || !password || !name) {
+        if (!email || !password || !username) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
@@ -41,8 +41,8 @@ export async function POST(request: Request) {
                 id: `USER-${Date.now()}`,
                 email,
                 password: hashedPassword,
-                name,
-                role: role || 'OPERATOR',
+                username,
+                role: role || 'USER',
                 updatedAt: new Date()
             }
         });
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     } catch (err: any) {
         console.error('Prisma Error:', err);
         if (err.code === 'P2002') {
-            return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
+            return NextResponse.json({ error: 'Email or Username already exists' }, { status: 400 });
         }
         return NextResponse.json({ error: 'Database error' }, { status: 500 });
     }

@@ -1,14 +1,15 @@
 import React from 'react';
-import { CheckCircle, X, Printer } from 'lucide-react';
+import { CheckCircle, X, Printer, Info } from 'lucide-react';
 
 interface LabelModalProps {
     isOpen: boolean;
     onClose: () => void;
     record: any;
     autoCloseMs?: number;
+    canPrint?: boolean;
 }
 
-const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record, autoCloseMs }) => {
+const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record, autoCloseMs, canPrint = true }) => {
     React.useEffect(() => {
         if (isOpen && autoCloseMs) {
             const timer = setTimeout(onClose, autoCloseMs);
@@ -43,10 +44,10 @@ const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record, autoCl
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh] print:shadow-none print:w-auto print:max-w-none print:max-h-none print:block animate-in zoom-in-95 duration-200">
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 backdrop-blur-md no-print">
                     <div className="flex items-center gap-2">
-                        <div className="p-1 bg-green-100 rounded-full">
-                            <CheckCircle className="text-green-600" size={18} />
+                        <div className={`p-1 ${canPrint ? 'bg-green-100' : 'bg-blue-100'} rounded-full`}>
+                            {canPrint ? <CheckCircle className="text-green-600" size={18} /> : <Info className="text-blue-600" size={18} />}
                         </div>
-                        <h3 className="font-bold text-slate-800">Ready to Print</h3>
+                        <h3 className="font-bold text-slate-800">{canPrint ? "Ready to Print" : "Part Label Details"}</h3>
                     </div>
                     <button
                         onClick={onClose}
@@ -99,15 +100,27 @@ const LabelModal: React.FC<LabelModalProps> = ({ isOpen, onClose, record, autoCl
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-slate-100 bg-white no-print">
-                    <button
-                        onClick={handlePrint}
-                        className="w-full bg-slate-900 hover:bg-black text-white py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 active:scale-[0.98]"
-                    >
-                        <Printer size={18} />
-                        Print Label
-                    </button>
-                </div>
+                {canPrint && (
+                    <div className="p-6 border-t border-slate-100 bg-white no-print">
+                        <button
+                            onClick={handlePrint}
+                            className="w-full bg-slate-600 hover:bg-black text-white py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 active:scale-[0.98]"
+                        >
+                            <Printer size={18} />
+                            Print Label
+                        </button>
+                    </div>
+                )}
+                {!canPrint && (
+                    <div className="p-6 border-t border-slate-100 bg-white no-print">
+                        <button
+                            onClick={onClose}
+                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                        >
+                            Close
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

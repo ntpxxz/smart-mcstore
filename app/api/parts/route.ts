@@ -4,7 +4,7 @@ import prisma from '@/lib/db';
 export async function GET() {
     try {
         const parts = await prisma.part.findMany({
-            orderBy: { sku: 'asc' }
+            orderBy: { partNo: 'asc' }
         });
         return NextResponse.json(parts);
     } catch (err) {
