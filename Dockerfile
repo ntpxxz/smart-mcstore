@@ -3,7 +3,7 @@ FROM node:22-alpine AS base
 # Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+RUN sed -i 's/https/http/g' /etc/apk/repositories && apk update && (apk add --no-cache libc6-compat || (sleep 5 && apk add --no-cache libc6-compat))
 WORKDIR /app
 
 # Install dependencies
@@ -33,13 +33,23 @@ FROM base AS runner
 WORKDIR /app
 
 # Install Chromium and dependencies for Puppeteer
-RUN apk add --no-cache \
+RUN set -x \
+    && sed -i 's/https/http/g' /etc/apk/repositories \
+    && apk update \
+    && (apk add --no-cache \
     chromium \
     nss \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont || \
+    (sleep 5 && apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont))
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
