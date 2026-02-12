@@ -7,16 +7,17 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql://rootpg:123456@host.docker.internal:5432/warehouse?schema=public&sslmode=disable
+      - DATABASE_URL=postgresql://rootpg:123456@db:5432/warehouse?schema=public&sslmode=disable
       - NEXTAUTH_URL=http://localhost:3050
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
       - app-net
-  db-dev:
+    depends_on:
+      - db
+
+  db:
     image: postgres:15
-    container_name: pg-dev
+    container_name: pg-main
     environment:
       POSTGRES_USER: rootpg
       POSTGRES_PASSWORD: 123456
@@ -24,7 +25,8 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
       - app-net
 
