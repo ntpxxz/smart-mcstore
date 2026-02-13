@@ -17,11 +17,16 @@ export async function GET() {
             qty: task.planQty,
             invoiceNo: task.invoiceNo,
             externalDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
-            status: task.status, // Keep original enum for logic
+            status: task.status,
             displayStatus: task.status.split('_').map(word =>
                 word.charAt(0) + word.slice(1).toLowerCase()
             ).join(' '),
             tagNo: task.tagNo,
+            spec: task.spec || '',
+            drawingNo: task.drawingNo || '',
+            unit: task.unit || '',
+            remark: task.remark || '',
+            taxInvoice: task.taxInvoice || '',
             createdAt: task.createdAt
         }));
 

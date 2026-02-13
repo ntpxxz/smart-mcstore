@@ -1,3 +1,10 @@
+import https from 'https';
+import http from 'http';
+import { URL as NodeURL } from 'url';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 /**
  * PBASS API Client
  * Handles communication with external PBASS API (cross-LAN) with Proxy support
@@ -95,11 +102,14 @@ class PBASSClient {
                 : this.baseUrl;
 
             console.log('🔗 Fetching from PBASS API:', url);
+            const parsedUrl = new NodeURL(url);
+            const isHttps = parsedUrl.protocol === 'https:';
+            const transport = isHttps ? https : http;
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-            const fetchOptions: any = {
+            const options: any = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || (isHttps ? 443 : 80),
+                path: parsedUrl.pathname + parsedUrl.search,
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
@@ -108,57 +118,115 @@ class PBASSClient {
                         'Authorization': `Bearer ${process.env.PBASS_API_TOKEN}`
                     })
                 },
-                signal: controller.signal,
+                timeout: this.timeout,
             };
 
-            // Add proxy agent if available
+            if (isHttps) {
+                options.rejectUnauthorized = !this.ignoreSSL;
+            }
+
+            // Add proxy agent if configured
             const agent = this.getProxyAgent();
             if (agent) {
-                // @ts-ignore - Node.js specific
-                fetchOptions.agent = agent;
+                options.agent = agent;
+                console.log('🌐 Using proxy agent');
+            } else if (isHttps && this.ignoreSSL) {
+                // Create custom agent to ignore SSL
+                options.agent = new https.Agent({
+                    rejectUnauthorized: false
+                });
+                console.log('🔓 SSL verification disabled');
             }
 
-            const response = await fetch(url, fetchOptions);
+            return new Promise((resolve, reject) => {
+                const req = transport.request(options, (res: any) => {
+                    let data = '';
 
-            clearTimeout(timeoutId);
+                    res.on('data', (chunk: any) => {
+                        data += chunk;
+                    });
 
-            if (!response.ok) {
-                throw new Error(`PBASS API returned ${response.status}: ${response.statusText}`);
-            }
+                    res.on('end', () => {
+                        try {
+                            if (res.statusCode !== 200) {
+                                reject(new Error(`PBASS API returned ${res.statusCode}: ${res.statusMessage}`));
+                                return;
+                            }
 
-            const data = await response.json();
+                            console.log('📦 PBASS API Raw Response (first 100 chars):', data.substring(0, 100));
+                            // Write to file for debugging
+                            try {
+                                require('fs').writeFileSync('pbass_debug.json', data);
+                                console.log('💾 Raw response saved to pbass_debug.json');
+                            } catch (e) { }
 
-            // Handle different response formats
-            let records: PBASSInvoiceRecord[] = [];
+                            let jsonData: any;
+                            try {
+                                jsonData = JSON.parse(data);
+                                // If the response is a string containing JSON, parse it again
+                                if (typeof jsonData === 'string') {
+                                    console.log('ℹ️ Detected double-encoded JSON string, parsing again...');
+                                    jsonData = JSON.parse(jsonData);
+                                }
+                            } catch (e) {
+                                console.error('❌ Failed to parse PBASS API response:', e);
+                                throw new Error('Invalid JSON response from PBASS API');
+                            }
 
-            if (Array.isArray(data)) {
-                records = data;
-            } else if (data.data && Array.isArray(data.data)) {
-                records = data.data;
-            } else if (data.records && Array.isArray(data.records)) {
-                records = data.records;
-            } else {
-                console.warn('⚠️ Unexpected PBASS API response format:', data);
-                records = [];
-            }
+                            console.log('📦 JSON Keys found:', Object.keys(jsonData));
 
-            console.log(`✅ Fetched ${records.length} records from PBASS API`);
+                            // Robust way to find records: search recursively for the largest array
+                            const findLargestArray = (obj: any): any[] => {
+                                if (Array.isArray(obj)) return obj;
+                                if (!obj || typeof obj !== 'object') return [];
 
-            return {
-                success: true,
-                data: records,
-                count: records.length,
-            };
+                                let largest: any[] = [];
+                                for (const key in obj) {
+                                    const value = obj[key];
+                                    if (Array.isArray(value)) {
+                                        if (value.length > largest.length) largest = value;
+                                    } else if (value && typeof value === 'object') {
+                                        const sub = findLargestArray(value);
+                                        if (sub.length > largest.length) largest = sub;
+                                    }
+                                }
+                                return largest;
+                            };
+
+                            const records = findLargestArray(jsonData);
+                            console.log(`✅ Extracted ${records.length} records from response`);
+
+                            if (records.length === 0) {
+                                console.warn('⚠️ No array of records found in response structure:', jsonData);
+                            }
+
+                            console.log(`✅ Fetched ${records.length} records from PBASS API`);
+
+                            resolve({
+                                success: true,
+                                data: records,
+                                count: records.length,
+                            });
+                        } catch (error: any) {
+                            reject(new Error(`Failed to parse response: ${error.message}`));
+                        }
+                    });
+                });
+
+                req.on('error', (error: any) => {
+                    reject(error);
+                });
+
+                req.on('timeout', () => {
+                    req.destroy();
+                    reject(new Error(`Request timeout after ${this.timeout}ms`));
+                });
+
+                req.end();
+            });
 
         } catch (error: any) {
             console.error('❌ PBASS API Error:', error);
-
-            if (error.name === 'AbortError') {
-                return {
-                    success: false,
-                    error: `Request timeout after ${this.timeout}ms`,
-                };
-            }
 
             // Provide more helpful error messages
             let errorMessage = error.message || 'Unknown error occurred';

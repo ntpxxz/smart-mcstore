@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync-worker": "tsx --env-file=.env scripts/sync-scheduler.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",

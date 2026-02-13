@@ -13,6 +13,11 @@ interface Task {
     status: string;
     displayStatus?: string;
     tagNo?: string | null;
+    spec?: string;
+    drawingNo?: string;
+    unit?: string;
+    remark?: string;
+    taxInvoice?: string;
     createdAt: string;
 }
 
@@ -224,19 +229,48 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quantity</p>
-                                    <p className="font-bold text-slate-800 text-lg">{selectedTask.qty}</p>
+                                    <div className="flex items-baseline gap-1">
+                                        <p className="font-bold text-slate-800 text-lg">{selectedTask.qty}</p>
+                                        <p className="text-xs text-slate-500">{selectedTask.unit || ''}</p>
+                                    </div>
                                 </div>
                                 <div className="col-span-2 space-y-1">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</p>
                                     <p className="text-sm text-slate-600 leading-relaxed">{selectedTask.partName}</p>
                                 </div>
+
+                                {selectedTask.spec && (
+                                    <div className="col-span-1 space-y-1">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Spec</p>
+                                        <p className="text-sm text-slate-700 font-medium">{selectedTask.spec}</p>
+                                    </div>
+                                )}
+                                {selectedTask.drawingNo && (
+                                    <div className="col-span-1 space-y-1">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Drawing No.</p>
+                                        <p className="text-sm text-slate-700 font-medium">{selectedTask.drawingNo}</p>
+                                    </div>
+                                )}
+                                {selectedTask.remark && (
+                                    <div className="col-span-2 space-y-1">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Remark</p>
+                                        <p className="text-xs text-slate-600 italic bg-amber-50 p-2 rounded border border-amber-100">{selectedTask.remark}</p>
+                                    </div>
+                                )}
+                                {selectedTask.taxInvoice && (
+                                    <div className="col-span-1 space-y-1">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tax Invoice</p>
+                                        <p className="text-sm text-emerald-700 font-bold">{selectedTask.taxInvoice}</p>
+                                    </div>
+                                )}
+
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">External Date</p>
                                     <p className="text-xs text-slate-500">{selectedTask.externalDate || '-'}</p>
                                 </div>
-                                <div className="space-y-1">
+                                <div className="col-span-2 space-y-1 pt-2 border-t border-slate-50">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Created At</p>
-                                    <p className="text-xs text-slate-500">{new Date(selectedTask.createdAt).toLocaleString()}</p>
+                                    <p className="text-xs text-slate-400">{new Date(selectedTask.createdAt).toLocaleString()}</p>
                                 </div>
                             </div>
 

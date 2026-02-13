@@ -6,8 +6,7 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id: idStr } = await params;
-        const id = parseInt(idStr);
+        const { id } = await params;
         const body = await request.json();
         const supplier = await prisma.supplier.update({
             where: { id },
@@ -33,8 +32,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id: idStr } = await params;
-        const id = parseInt(idStr);
+        const { id } = await params;
         await prisma.supplier.delete({
             where: { id },
         });

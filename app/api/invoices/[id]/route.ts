@@ -6,12 +6,15 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
+    const invoiceId = parseInt(id);
+
+    if (isNaN(invoiceId)) {
+        return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+    }
+
     try {
-        const invoice = await prisma.inboundInvoice.findUnique({
-            where: { id },
-            include: {
-                items: true
-            }
+        const invoice = await prisma.invoice.findUnique({
+            where: { id: invoiceId }
         });
 
         if (!invoice) {
@@ -30,15 +33,21 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
+    const invoiceId = parseInt(id);
+
+    if (isNaN(invoiceId)) {
+        return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+    }
+
     try {
         const body = await request.json();
-        const { status } = body;
+        // The frontend sends { iqcstatus: status } or similar
+        const { iqcstatus } = body;
 
-        const updatedInvoice = await prisma.inboundInvoice.update({
-            where: { id },
-            data: { status },
-            include: {
-                items: true
+        const updatedInvoice = await prisma.invoice.update({
+            where: { id: invoiceId },
+            data: {
+                iqcstatus: iqcstatus
             }
         });
 
@@ -54,9 +63,15 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
+    const invoiceId = parseInt(id);
+
+    if (isNaN(invoiceId)) {
+        return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+    }
+
     try {
-        await prisma.inboundInvoice.delete({
-            where: { id }
+        await prisma.invoice.delete({
+            where: { id: invoiceId }
         });
         return NextResponse.json({ message: 'Deleted successfully' });
     } catch (err) {

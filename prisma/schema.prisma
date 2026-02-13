@@ -104,6 +104,7 @@ model Supplier {
   email       String?
   phone       String?
   address     String?
+  country     String?
   taxId       String?
   
   parts       Part[]   @relation("PartSupplier")
@@ -210,6 +211,21 @@ model InboundTask {
   
   // --- Meta ---
   dueDate       DateTime?
+  spec          String?     // SPEC from API
+  drawingNo     String?     // DRAW from API
+  unit          String?     // REPLY_UNIT from API
+  remark        String?     // REMARK from API
+  taxInvoice    String?     // TAX_INVOICE from API
+  
+  // --- Additional PBASS Fields ---
+  plant         String?     // PLAC from API
+  division      String?     // DIVI from API
+  vendorCode    String?     // VENDOR (code) from API
+  poDate        DateTime?   // PO_DATE from API
+  unitPrice     Float?      // REPLY_UP from API
+  amount        Float?      // REPLY_AMT from API
+  currency      String?     // REPLY_CUR from API
+  
   isUrgent      Boolean     @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt

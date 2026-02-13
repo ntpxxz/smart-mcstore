@@ -25,6 +25,7 @@ export async function POST(request: Request) {
                 address: body.address,
                 country: body.country,
                 taxId: body.taxId,
+                code: body.code || `SUP-${Date.now()}`,
             },
         });
         return NextResponse.json(supplier);
