@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ClipboardList, RefreshCw, Printer, CheckCircle2, Clock, ChevronLeft, ChevronRight, X, Info, ArrowUpDown } from 'lucide-react';
+import { ClipboardList, RefreshCw, Printer, CheckCircle2, Clock, ChevronLeft, ChevronRight, X, Info, ArrowUpDown, Filter, Search } from 'lucide-react';
 
 interface Task {
     id: string;
@@ -31,11 +31,23 @@ interface TaskQueueProps {
 const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSyncing }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'externalDate', direction: 'desc' });
     const itemsPerPage = 10;
 
     const processedTasks = useMemo(() => {
         let data = tasks.filter(t => t.status.toUpperCase() === 'ARRIVED');
+
+        if (searchTerm) {
+            const lower = searchTerm.toLowerCase();
+            data = data.filter(item =>
+                (item.po || "").toLowerCase().includes(lower) ||
+                (item.vendor || "").toLowerCase().includes(lower) ||
+                (item.invoiceNo || "").toLowerCase().includes(lower) ||
+                (item.partNo || "").toLowerCase().includes(lower) ||
+                (item.partName || "").toLowerCase().includes(lower)
+            );
+        }
 
         if (sortConfig.key) {
             data.sort((a: any, b: any) => {
@@ -47,7 +59,7 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
             });
         }
         return data;
-    }, [tasks, sortConfig]);
+    }, [tasks, sortConfig, searchTerm]);
 
     const totalPages = Math.ceil(processedTasks.length / itemsPerPage);
     const currentTasks = processedTasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -73,21 +85,46 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
     return (
         <div className="space-y-6">
             <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden transition-all hover:shadow-md">
-                <div className="px-6 py-4 border-b border-white/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
-                        <div className="p-1.5 bg-indigo-100/80 text-indigo-600 rounded-lg">
-                            <ClipboardList size={18} />
+                <div className="px-6 py-4 border-b border-white/50 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white/40">
+                    <div className="flex items-center gap-4">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
+                            <div className="p-1.5 bg-indigo-100/80 text-indigo-600 rounded-lg">
+                                <ClipboardList size={18} />
+                            </div>
+                            Inbound Tasks
+                            <span className="ml-2 px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold border border-indigo-100">
+                                {processedTasks.length}
+                            </span>
+                        </h3>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center gap-3">
+                        {/* Search Input */}
+                        <div className="relative w-full md:w-64 group">
+                            <input
+                                type="text"
+                                placeholder="Search PO, Part, Vendor..."
+                                className="w-full pl-9 pr-8 py-2 text-sm bg-white/60 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                                value={searchTerm}
+                                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                            />
+                            <Filter size={14} className="absolute left-3 top-2.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm("")} className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 p-0.5 hover:bg-slate-100 rounded-full transition-colors">
+                                    <X size={14} />
+                                </button>
+                            )}
                         </div>
-                        Inbound Tasks (ARRIVED)
-                    </h3>
-                    <button
-                        onClick={onSync}
-                        disabled={isSyncing}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
-                    >
-                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                        {isSyncing ? 'Syncing...' : 'Sync API'}
-                    </button>
+
+                        <button
+                            onClick={onSync}
+                            disabled={isSyncing}
+                            className={`w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-indigo-600/20 ${isSyncing ? 'animate-pulse' : ''}`}
+                        >
+                            <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                            {isSyncing ? 'Updating Database...' : 'Sync PBASS API'}
+                        </button>
+                    </div>
                 </div>
 
                 <div className="p-6 pt-2">
@@ -95,20 +132,35 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
                         <table className="w-full text-left text-sm min-w-[1000px]">
                             <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-semibold tracking-wider border-b border-slate-100">
                                 <tr>
-                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('externalDate')}>
-                                        Received Date <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors group/th" onClick={() => requestSort('externalDate')}>
+                                        <div className="flex items-center gap-1">
+                                            Received Date
+                                            <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'externalDate' ? 'opacity-100 text-indigo-500' : 'opacity-30 group-hover/th:opacity-100'}`} />
+                                        </div>
                                     </th>
-                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('vendor')}>
-                                        Vendor <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors group/th" onClick={() => requestSort('vendor')}>
+                                        <div className="flex items-center gap-1">
+                                            Vendor
+                                            <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'vendor' ? 'opacity-100 text-indigo-500' : 'opacity-30 group-hover/th:opacity-100'}`} />
+                                        </div>
                                     </th>
-                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('po')}>
-                                        PO / Invoice <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors group/th" onClick={() => requestSort('po')}>
+                                        <div className="flex items-center gap-1">
+                                            PO / Invoice
+                                            <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'po' ? 'opacity-100 text-indigo-500' : 'opacity-30 group-hover/th:opacity-100'}`} />
+                                        </div>
                                     </th>
-                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('partNo')}>
-                                        Part # <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors group/th" onClick={() => requestSort('partNo')}>
+                                        <div className="flex items-center gap-1">
+                                            Part Details
+                                            <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'partNo' ? 'opacity-100 text-indigo-500' : 'opacity-30 group-hover/th:opacity-100'}`} />
+                                        </div>
                                     </th>
-                                    <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('qty')}>
-                                        Qty <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
+                                    <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100 transition-colors group/th" onClick={() => requestSort('qty')}>
+                                        <div className="flex items-center justify-end gap-1">
+                                            Qty
+                                            <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'qty' ? 'opacity-100 text-indigo-500' : 'opacity-30 group-hover/th:opacity-100'}`} />
+                                        </div>
                                     </th>
                                     <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>

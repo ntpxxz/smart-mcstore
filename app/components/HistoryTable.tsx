@@ -83,6 +83,9 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ history, isConnected, onDel
                         <History size={18} />
                     </div>
                     Received History
+                    <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs font-bold border border-slate-200">
+                        {processedHistory.length}
+                    </span>
                 </h3>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     <div className="relative flex-1 sm:w-64 group">

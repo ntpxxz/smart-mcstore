@@ -10,6 +10,7 @@ import UserManagement from './components/UserManagement';
 import SupplierManagement from './components/SupplierManagement';
 import TaskQueue from './components/TaskQueue';
 import Toast, { ToastType } from './components/Toast';
+import { TableSkeleton } from './components/Skeleton';
 
 const API_BASE_URL = '/api';
 
@@ -26,6 +27,7 @@ export default function Home() {
   const [suppliersDatabase, setSuppliersDatabase] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,6 +49,7 @@ export default function Home() {
 
   // --- API: FETCH DATA ---
   const fetchData = async () => {
+    setIsLoading(true);
     try {
       const invRes = await fetch(`${API_BASE_URL}/invoices`);
       if (!invRes.ok) throw new Error("API Error");
@@ -54,9 +57,10 @@ export default function Home() {
       setHistory(invData);
 
       const poRes = await fetch(`${API_BASE_URL}/pos`);
-      if (!poRes.ok) throw new Error("API Error");
-      const poData = await poRes.json();
-      setPoDatabase(poData);
+      if (poRes.ok) {
+        const poData = await poRes.json();
+        setPoDatabase(poData);
+      }
 
       const partsRes = await fetch(`${API_BASE_URL}/parts`);
       if (partsRes.ok) {
@@ -80,6 +84,8 @@ export default function Home() {
     } catch (err) {
       console.warn("Backend not detected.", err);
       setIsConnected(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -133,26 +139,28 @@ export default function Home() {
 
   const handleSync = async () => {
     setIsSyncing(true);
+    showToast("Starting PBASS synchronization...", "info");
+
     try {
-      const res = await fetch(`${API_BASE_URL}/sync`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forceFullSync: false })
+      });
+
       const data = await res.json();
+
       if (res.ok) {
-        // Use a longer toast duration for sync summary
-        setToast({
-          message: data.message || "Sync completed!",
-          type: 'success'
-        });
-
-        // Extended display time for summary
-        setTimeout(() => { }, 10000);
-
+        // Custom message for sync summary
+        const summary = data.message || `Sync completed! Added: ${data.added || 0}`;
+        showToast(summary, "success");
         fetchData();
       } else {
         showToast(data.error || "Sync failed", "error");
       }
     } catch (err) {
       console.error("Sync failed", err);
-      showToast("Connection error during sync", "error");
+      showToast("Connection error: Ensure PBASS API is reachable", "error");
     } finally {
       setIsSyncing(false);
     }
@@ -321,22 +329,34 @@ export default function Home() {
 
             {currentView === 'invoices' ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <TaskQueue
-                  tasks={tasks}
-                  onSync={handleSync}
-                  onProcess={handleProcessTask}
-                  isSyncing={isSyncing}
-                />
+                {isLoading && tasks.length === 0 ? (
+                  <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 border border-white/60">
+                    <TableSkeleton />
+                  </div>
+                ) : (
+                  <TaskQueue
+                    tasks={tasks}
+                    onSync={handleSync}
+                    onProcess={handleProcessTask}
+                    isSyncing={isSyncing}
+                  />
+                )}
               </div>
             ) : currentView === 'history' ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <HistoryTable
-                  history={history}
-                  isConnected={isConnected}
-                  onDelete={deleteRecord}
-                  onUpdateStatus={updateStatus}
-                  onPreview={(rec) => { setPreviewRecord(rec); setCanPrintLabel(false); setIsModalOpen(true); }}
-                />
+                {isLoading && history.length === 0 ? (
+                  <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 border border-white/60">
+                    <TableSkeleton />
+                  </div>
+                ) : (
+                  <HistoryTable
+                    history={history}
+                    isConnected={isConnected}
+                    onDelete={deleteRecord}
+                    onUpdateStatus={updateStatus}
+                    onPreview={(rec) => { setPreviewRecord(rec); setCanPrintLabel(false); setIsModalOpen(true); }}
+                  />
+                )}
               </div>
             ) : currentView === 'users' ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

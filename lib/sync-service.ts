@@ -179,8 +179,19 @@ export class SyncService {
             errors: errorCount,
             total: records.length,
             message: candidateRecords.length === 0 && records.length > 0
-                ? `Fetched ${records.length} records, but NO "Ramp" or "Diverter" parts were found. Please check if the filter keywords match your data.`
-                : `Successfully synced. Added: ${addedCount}, Skipped: ${skippedCount}\n\nBreakdown:\n• Not Ramp/Diverter: ${notRampDiverterCount}\n• Duplicates: ${duplicateCount}\n• Errors: ${errorCount}`,
+                ? `📦 PBASS Sync Results:
+                  ⚠️ Found ${records.length} records, but NO "Ramp" or "Diverter" parts matching.
+                  
+                  Please verify if the part names in PBASS system contain these keywords.`
+                : `✨ Sync Completed Successfully
+                  
+                  ✅ Added New Items: ${addedCount}
+                  ⏭️ Skipped/Duplicates: ${skippedCount}
+                  
+                  Breakdown:
+                  • Non-matching Parts: ${notRampDiverterCount}
+                  • Existing Records: ${duplicateCount}
+                  • Data Errors: ${errorCount}`,
             source: 'API',
         };
     }
