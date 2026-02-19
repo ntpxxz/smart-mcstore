@@ -81,6 +81,16 @@ export class SyncService {
                     continue;
                 }
 
+                // Filter by Part Name: Only allow 'Ramp' and 'Diverter'
+                const normalizedPartName = partName.trim().toUpperCase();
+                const allowedPartNames = ['RAMP', 'DIVERTER'];
+
+                if (!allowedPartNames.includes(normalizedPartName)) {
+                    // console.log(`Skipping record with Part Name: ${partName}`);
+                    skippedCount++;
+                    continue;
+                }
+
                 const parsedDueDate = this.parseDate(externalDate);
                 const parsedPoDate = this.parseDate(poDateStr);
 
