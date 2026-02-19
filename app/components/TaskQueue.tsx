@@ -31,7 +31,7 @@ interface TaskQueueProps {
 const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSyncing }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'createdAt', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'externalDate', direction: 'desc' });
     const itemsPerPage = 10;
 
     const processedTasks = useMemo(() => {
@@ -95,7 +95,7 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
                         <table className="w-full text-left text-sm min-w-[1000px]">
                             <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-semibold tracking-wider border-b border-slate-100">
                                 <tr>
-                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('createdAt')}>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('externalDate')}>
                                         Received Date <ArrowUpDown size={12} className="inline ml-1 text-slate-300" />
                                     </th>
                                     <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('vendor')}>
@@ -130,7 +130,7 @@ const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onSync, onProcess, isSynci
                                     currentTasks.map((task) => (
                                         <tr key={task.id} className="hover:bg-blue-50/30 transition-colors group cursor-pointer" onClick={() => setSelectedTask(task)}>
                                             <td className="px-6 py-4 text-slate-500 whitespace-nowrap text-xs font-medium">
-                                                {formatDate(task.createdAt)}
+                                                {formatDate(task.externalDate || task.createdAt)}
                                             </td>
                                             <td className="px-6 py-4 font-medium text-slate-800 truncate max-w-[200px]" title={task.vendor}>
                                                 {task.vendor || "-"}

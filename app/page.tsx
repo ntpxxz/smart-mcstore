@@ -137,7 +137,15 @@ export default function Home() {
       const res = await fetch(`${API_BASE_URL}/sync`, { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || "Sync completed!");
+        // Use a longer toast duration for sync summary
+        setToast({
+          message: data.message || "Sync completed!",
+          type: 'success'
+        });
+
+        // Extended display time for summary
+        setTimeout(() => { }, 10000);
+
         fetchData();
       } else {
         showToast(data.error || "Sync failed", "error");
@@ -158,8 +166,8 @@ export default function Home() {
       partNo: task.partNo,
       partName: task.partName,
       invoice: task.invoiceNo || `INV-${task.po.split('-').pop()}-${Date.now().toString().slice(-4)}`,
-      invoiceDate: new Date().toISOString().split('T')[0],
-      receivedDate: new Date().toISOString().split('T')[0],
+      invoiceDate: task.externalDate || new Date().toISOString().split('T')[0],
+      receivedDate: task.externalDate || new Date().toISOString().split('T')[0],
       qty: task.qty.toString(),
       user: currentUser.username,
       iqcstatus: 'Pending',
@@ -355,6 +363,7 @@ export default function Home() {
         <Toast
           message={toast.message}
           type={toast.type}
+          duration={toast.message.includes('Skipped') ? 10000 : 30000}
           onClose={() => setToast(null)}
         />
       )}

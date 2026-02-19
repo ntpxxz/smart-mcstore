@@ -57,7 +57,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 3000 }
                 <div className="flex-shrink-0">
                     {currentStyle.icon}
                 </div>
-                <div className={`flex-1 text-sm font-semibold ${currentStyle.text}`}>
+                <div className={`flex-1 text-sm font-semibold ${currentStyle.text} whitespace-pre-line`}>
                     {message}
                 </div>
                 <button

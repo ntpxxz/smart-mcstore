@@ -1,5 +1,5 @@
-import prisma from './db.ts';
-import { pbassClient } from './pbass-client.ts';
+import prisma from './db';
+import { pbassClient } from './pbass-client';
 
 export interface SyncResult {
     success: boolean;
@@ -15,11 +15,20 @@ export class SyncService {
     /**
      * Sync data from PBASS API to local database
      */
-    async syncFromAPI(): Promise<SyncResult> {
+    async syncFromAPI(forceFullSync: boolean = false): Promise<SyncResult> {
         console.log('🔄 Attempting to sync from PBASS API...');
-        console.log('📍 PBASS_API_URL:', process.env.PBASS_API_URL);
 
-        const apiResult = await pbassClient.fetchInvoices();
+        const rawUrl = process.env.PBASS_API_URL || '';
+        // If forceFullSync is true, use ALL/ALL, otherwise use rolling window for "Real-time/Fast"
+        const dynamicUrl = this.getDynamicUrl(rawUrl, forceFullSync ? -1 : 30);
+
+        console.log('📍 Original URL:', rawUrl);
+        console.log('📍 Dynamic URL:', dynamicUrl);
+
+        // Remove status: 'RECEIVE' as requested
+        const apiResult = await pbassClient.fetchInvoices({
+            customUrl: dynamicUrl
+        });
 
         if (!apiResult.success || !apiResult.data) {
             console.warn('⚠️ API failed or returned no data');
@@ -39,11 +48,46 @@ export class SyncService {
 
         let addedCount = 0;
         let skippedCount = 0;
+        let notRampDiverterCount = 0;
+        let duplicateCount = 0;
         let errorCount = 0;
 
-        for (const record of records) {
+        // Optimized processing:
+        console.log('🔍 Pre-filtering records...');
+        const candidateRecords = records.filter(record => {
+            // Get multiple fields to search for keywords
+            const partName = (record.ITEM_NAME || (record as any).itemName || '').toString().toUpperCase();
+            const partNo = (record.ITEM_NO || (record as any).itemNo || '').toString().toUpperCase();
+            const spec = (record.SPEC || (record as any).spec || '').toString().toUpperCase();
+
+            // Search for keywords in any of these fields
+            const isRampOrDiverter =
+                partName.includes('RAMP') || partName.includes('DIVERTER') ||
+                partNo.includes('RAMP') || partNo.includes('DIVERTER') ||
+                spec.includes('RAMP') || spec.includes('DIVERTER');
+
+            if (!isRampOrDiverter) {
+                notRampDiverterCount++;
+                skippedCount++;
+                return false;
+            }
+
+            // Status check removed as requested
+            return true;
+        });
+
+        if (candidateRecords.length === 0 && records.length > 0) {
+            console.warn(`⚠️ Warning: Found 0 matching parts in ${records.length} total records.`);
+            console.log('💡 Sample part names from fetched data (first 5 unique):',
+                [...new Set(records.slice(0, 100).map(r => r.ITEM_NAME || (r as any).itemName).filter(Boolean))].slice(0, 5)
+            );
+        }
+
+        console.log(`⚡ Processing ${candidateRecords.length} candidate records...`);
+
+        for (const record of candidateRecords) {
             try {
-                // Normalize field names (API might return keys in different case/format)
+                // Normalize field names
                 const po = record.PO_NO || (record as any).poNo || (record as any).PONo;
                 const partNo = record.ITEM_NO || (record as any).itemNo || record.ITEM_NAME || 'N/A';
                 const vendor = record.VENDOR_NAME || (record as any).vendorName || 'UNKNOWN';
@@ -57,7 +101,6 @@ export class SyncService {
                 const remark = record.REMARK || (record as any).remark;
                 const taxInvoice = record.TAX_INVOICE || (record as any).taxInvoice;
 
-                // New additional fields
                 const plant = record.PLAC || (record as any).plac;
                 const division = record.DIVI || (record as any).divi;
                 const vendorCode = record.VENDOR || (record as any).vendorCode;
@@ -66,27 +109,9 @@ export class SyncService {
                 const amount = parseFloat(record.REPLY_AMT?.toString() || '0') || 0;
                 const currency = record.REPLY_CUR || (record as any).replyCur;
 
-                // Use DUE_DATE as primary for system dueDate, fallback to INV_DATE
-                const externalDate = record.DUE_DATE || (record as any).dueDate || record.INV_DATE || (record as any).invDate;
+                const externalDate = record.INV_DATE || (record as any).invDate || record.DUE_DATE || (record as any).dueDate;
 
                 if (!po) {
-                    console.warn(`⏭️ Skipping record: Missing PO Number (Part: ${partNo})`);
-                    skippedCount++;
-                    continue;
-                }
-
-                if (partNo === 'N/A' && partName === 'N/A') {
-                    console.warn(`⏭️ Skipping record: Missing Part Info (PO: ${po})`);
-                    skippedCount++;
-                    continue;
-                }
-
-                // Filter by Part Name: Only allow 'Ramp' and 'Diverter'
-                const normalizedPartName = partName.trim().toUpperCase();
-                const allowedPartNames = ['RAMP', 'DIVERTER'];
-
-                if (!allowedPartNames.includes(normalizedPartName)) {
-                    // console.log(`Skipping record with Part Name: ${partName}`);
                     skippedCount++;
                     continue;
                 }
@@ -95,12 +120,13 @@ export class SyncService {
                 const parsedPoDate = this.parseDate(poDateStr);
 
                 // Check for duplicates
-                const existing = await prisma.inboundTask.findFirst({
+                const existing = await prisma.inboundTask.findUnique({
                     where: {
-                        poNo: po,
-                        partNo,
-                        invoiceNo,
-                        vendor
+                        invoiceNo_partNo_vendor: {
+                            invoiceNo: invoiceNo || '',
+                            partNo: partNo || '',
+                            vendor: vendor || 'UNKNOWN',
+                        }
                     }
                 });
 
@@ -129,10 +155,15 @@ export class SyncService {
                             currency
                         }
                     });
-                    console.log(`✨ Added new task: ${po} - ${partNo}`);
                     addedCount++;
                 } else {
-                    // Strictly skip if already exists as per user request
+                    if (existing.status === 'ARRIVED') {
+                        await prisma.inboundTask.update({
+                            where: { id: existing.id },
+                            data: { dueDate: parsedDueDate }
+                        });
+                    }
+                    duplicateCount++;
                     skippedCount++;
                 }
             } catch (err) {
@@ -147,7 +178,9 @@ export class SyncService {
             skipped: skippedCount,
             errors: errorCount,
             total: records.length,
-            message: `Successfully synced. Added: ${addedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`,
+            message: candidateRecords.length === 0 && records.length > 0
+                ? `Fetched ${records.length} records, but NO "Ramp" or "Diverter" parts were found. Please check if the filter keywords match your data.`
+                : `Successfully synced. Added: ${addedCount}, Skipped: ${skippedCount}\n\nBreakdown:\n• Not Ramp/Diverter: ${notRampDiverterCount}\n• Duplicates: ${duplicateCount}\n• Errors: ${errorCount}`,
             source: 'API',
         };
     }
@@ -168,6 +201,41 @@ export class SyncService {
         // Fallback to default
         const date = new Date(dateStr);
         return isNaN(date.getTime()) ? null : date;
+    }
+
+    /**
+     * Replaces date segments (YYYYMMDD) in URL with 'ALL/ALL' or a rolling window
+     */
+    private getDynamicUrl(url: string, daysLookback: number = 30): string {
+        try {
+            const dateRangeRegex = /\/(\d{8})\/(\d{8})\//;
+
+            if (daysLookback === -1) {
+                // Unlimited mode
+                if (dateRangeRegex.test(url)) {
+                    return url.replace(dateRangeRegex, '/ALL/ALL/');
+                }
+                return url;
+            }
+
+            // Real-time mode: use rolling window
+            const now = new Date();
+            const past = new Date();
+            past.setDate(now.getDate() - daysLookback);
+
+            const formatDate = (d: Date) => d.toISOString().split('T')[0].split('-').join('');
+            const fromDate = formatDate(past);
+            const toDate = formatDate(now);
+
+            if (dateRangeRegex.test(url)) {
+                return url.replace(dateRangeRegex, `/${fromDate}/${toDate}/`);
+            }
+
+            return url;
+        } catch (error) {
+            console.error('Error generating dynamic URL:', error);
+            return url;
+        }
     }
 }
 

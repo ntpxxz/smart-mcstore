@@ -32,6 +32,7 @@ interface PBASSInvoiceRecord {
     REPLY_CUR?: string;
     STATUS?: string;
     REMARK?: string;
+    TAX_INVOICE?: string;
 }
 
 export interface PBASSResponse {
@@ -84,9 +85,11 @@ class PBASSClient {
         endDate?: string;
         status?: string;
         vendor?: string;
+        customUrl?: string; // Allow overriding the URL
     }): Promise<PBASSResponse> {
         try {
-            if (!this.baseUrl) {
+            const finalBaseUrl = filters?.customUrl || this.baseUrl;
+            if (!finalBaseUrl) {
                 throw new Error('PBASS_API_URL is not configured');
             }
 
@@ -98,8 +101,8 @@ class PBASSClient {
             if (filters?.vendor) params.append('vendor', filters.vendor);
 
             const url = params.toString()
-                ? `${this.baseUrl}?${params.toString()}`
-                : this.baseUrl;
+                ? `${finalBaseUrl}${finalBaseUrl.includes('?') ? '&' : '?'}${params.toString()}`
+                : finalBaseUrl;
 
             console.log('🔗 Fetching from PBASS API:', url);
             const parsedUrl = new NodeURL(url);
