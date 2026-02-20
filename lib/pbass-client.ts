@@ -48,16 +48,22 @@ class PBASSClient {
     /**
      * Get proxy agent if proxy is configured
      */
-    private getProxyAgent() {
+    private getProxyAgent(url: string) {
         const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+        const noProxy = process.env.NO_PROXY || '';
 
-        if (!proxyUrl) {
+        // Simple NO_PROXY check
+        const targetHost = new URL(url).hostname;
+        const isExcluded = noProxy.split(',').some(p => p.trim() === targetHost || targetHost.endsWith('.' + p.trim()));
+
+        if (!proxyUrl || isExcluded) {
+            if (isExcluded) console.log(`⏩ Bypassing proxy for: ${targetHost}`);
             return null;
         }
 
         try {
             const { HttpsProxyAgent } = require('https-proxy-agent');
-            console.log(`🌐 Using proxy: ${proxyUrl.replace(/:[^:@]+@/, ':***@')}`); // Hide password
+            console.log(`🌐 Using proxy: ${proxyUrl.replace(/:[^:@]+@/, ':***@')} for ${targetHost}`);
 
             return new HttpsProxyAgent(proxyUrl, {
                 rejectUnauthorized: !this.ignoreSSL
@@ -112,7 +118,7 @@ class PBASSClient {
             };
 
             // Add proxy agent if available
-            const agent = this.getProxyAgent();
+            const agent = this.getProxyAgent(url);
             if (agent) {
                 // @ts-ignore - Node.js specific
                 fetchOptions.agent = agent;

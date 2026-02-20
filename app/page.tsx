@@ -136,15 +136,21 @@ export default function Home() {
     try {
       const res = await fetch(`${API_BASE_URL}/sync`, { method: 'POST' });
       const data = await res.json();
+
       if (res.ok) {
-        showToast(data.message || "Sync completed!");
+        if (data.stats && data.stats.added > 0) {
+          showToast(`✅ Successfully added ${data.stats.added} new tasks! (Filtered: ${data.stats.skipped} unrelated items)`, "success");
+        } else {
+          showToast(`ℹ️ No new Ramp/Diverter tasks found. (Filtered: ${data.stats.skipped} other items)`, "info");
+        }
         fetchData();
       } else {
-        showToast(data.error || "Sync failed", "error");
+        const errorMessage = data.error || data.details || "Sync failed";
+        showToast(`❌ Sync Error: ${errorMessage}`, "error");
       }
     } catch (err) {
       console.error("Sync failed", err);
-      showToast("Connection error during sync", "error");
+      showToast("❌ Connection error: Could not reach the API.", "error");
     } finally {
       setIsSyncing(false);
     }
@@ -356,6 +362,7 @@ export default function Home() {
           message={toast.message}
           type={toast.type}
           onClose={() => setToast(null)}
+          duration={6000}
         />
       )}
     </div>

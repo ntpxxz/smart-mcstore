@@ -4,6 +4,13 @@ import prisma from '@/lib/db';
 export async function GET() {
     try {
         const tasks = await prisma.inboundTask.findMany({
+            where: {
+                OR: [
+                    { partName: { contains: 'Ramp', mode: 'insensitive' } },
+                    { partName: { contains: 'Diverter', mode: 'insensitive' } },
+                    { partName: { contains: 'Divertor', mode: 'insensitive' } },
+                ]
+            },
             orderBy: { createdAt: 'desc' }
         });
 

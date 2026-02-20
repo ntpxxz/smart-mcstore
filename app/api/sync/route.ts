@@ -1,58 +1,32 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import fs from 'fs';
-import path from 'path';
-import { parse } from 'csv-parse/sync';
 import { pbassClient } from '@/lib/pbass-client';
 
-// Path to the CSV file (fallback)
-const CSV_FILE_PATH = path.join(process.cwd(), 'files', 'INVINCOM_(20260127_154124).csv');
+
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json().catch(() => ({}));
-        const useCSV = body.useCSV === true; // Force CSV mode if requested
+        // const body = await request.json().catch(() => ({}));
+        // const useCSV = body.useCSV === true; // No longer used
 
         let records: any[] = [];
         let source = 'API';
 
-        // Try API first (unless CSV is forced)
-        if (!useCSV) {
-            console.log('🔄 Attempting to sync from PBASS API...');
+        // Sync only from API (CSV sync is legacy and no longer used)
+        console.log('🔄 Attempting to sync from PBASS API...');
 
-            const apiResult = await pbassClient.fetchInvoices({
-                status: 'WAITING RECEIVE', // Only fetch pending items
-            });
+        const apiResult = await pbassClient.fetchInvoices(); // Fetch all items to filter manually
 
-            if (apiResult.success && apiResult.data && apiResult.data.length > 0) {
-                records = apiResult.data;
-                source = 'API';
-                console.log(`✅ Using API data: ${records.length} records`);
-            } else {
-                console.warn('⚠️ API failed or returned no data, falling back to CSV');
-                source = 'CSV (API Fallback)';
-            }
+        if (apiResult.success && apiResult.data) {
+            records = apiResult.data;
+            source = 'API';
+            console.log(`✅ Using API data: ${records.length} records`);
         } else {
-            console.log('📁 Using CSV mode (forced)');
-            source = 'CSV (Manual)';
-        }
-
-        // Fallback to CSV if API failed or was forced
-        if (records.length === 0) {
-            if (!fs.existsSync(CSV_FILE_PATH)) {
-                return NextResponse.json({
-                    error: 'No data source available. API failed and CSV file not found.',
-                    source: 'None'
-                }, { status: 404 });
-            }
-
-            const fileContent = fs.readFileSync(CSV_FILE_PATH, 'utf-8');
-            records = parse(fileContent, {
-                columns: true,
-                skip_empty_lines: true,
-                trim: true
-            });
-            console.log(`📄 Using CSV data: ${records.length} records`);
+            console.error('❌ API failed:', apiResult.error);
+            return NextResponse.json({
+                error: `API failed: ${apiResult.error || 'No data returned'}`,
+                source: 'API'
+            }, { status: 500 });
         }
 
         let addedCount = 0;
@@ -65,12 +39,24 @@ export async function POST(request: Request) {
                 const po = record.PO_NO || record.poNo;
                 const partNo = record.ITEM_NO || record.itemNo;
                 const vendor = record.VENDOR_NAME || record.vendorName;
-                const partName = record.ITEM_NAME || record.itemName;
+                const partName = record.ITEM_NAME || record.itemName || '';
                 const qty = parseInt(record.REPLY_QTY || record.replyQty || '0') || 0;
                 const invoiceNo = record.INV_NO || record.invNo;
                 const externalDate = record.INV_DATE || record.invDate;
 
                 if (!po || !partNo) {
+                    skippedCount++;
+                    continue;
+                }
+
+                // Filter by Part Name: Only allow 'Ramp' or 'Diverter'
+                const lowerPartName = partName.toLowerCase();
+                const isRampOrDiverter = lowerPartName.includes('ramp') || lowerPartName.includes('diverter') || lowerPartName.includes('divertor');
+
+                if (!isRampOrDiverter) {
+                    if (skippedCount < 5) { // Only log first 5 to avoid spam
+                        console.log(`⏭️ Skipping part: "${partName}" (not Ramp/Diverter)`);
+                    }
                     skippedCount++;
                     continue;
                 }
@@ -93,31 +79,32 @@ export async function POST(request: Request) {
 
                 const parsedDueDate = parseDate(externalDate);
 
-                // Check for duplicates
+                // Check for duplicates with trimmed values
                 const existing = await prisma.inboundTask.findFirst({
                     where: {
-                        poNo: po,
-                        partNo,
-                        invoiceNo,
-                        vendor
+                        invoiceNo: invoiceNo.trim(),
+                        partNo: partNo.trim(),
+                        vendor: vendor.trim()
                     }
                 });
 
                 if (!existing) {
                     await prisma.inboundTask.create({
                         data: {
-                            poNo: po,
-                            vendor,
-                            partNo,
-                            partName,
+                            poNo: po.trim(),
+                            vendor: vendor.trim(),
+                            partNo: partNo.trim(),
+                            partName: partName.trim(),
                             planQty: qty,
-                            invoiceNo,
+                            invoiceNo: invoiceNo.trim(),
                             dueDate: parsedDueDate,
                             status: 'ARRIVED'
                         }
                     });
                     addedCount++;
                 } else {
+                    // Log details of the duplicate only for debugging if needed
+                    // console.log(`ℹ️ Duplicate found: ${invoiceNo} / ${partNo}`);
                     skippedCount++;
                 }
             } catch (err) {
